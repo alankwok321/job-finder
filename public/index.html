@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JUMP 求職助手</title>
+<style>
+  :root {
+    --primary: #c0392b;
+    --primary-dark: #a93226;
+    --primary-light: #f5e6e6;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --border: #e0e0e0;
+    --text: #2c3e50;
+    --text-muted: #7f8c8d;
+    --success: #27ae60;
+    --warning: #f39c12;
+    --blue: #2980b9;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  header h1 span.logo {
+    background: white;
+    color: var(--primary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 900;
+    font-size: 1rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.8rem;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+
+  #profileBtn {
+    background: rgba(255,255,255,0.15);
+    border: 1.5px solid rgba(255,255,255,0.5);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #profileBtn:hover { background: rgba(255,255,255,0.25); }
+
+  .profile-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #f39c12;
+  }
+  .profile-dot.set { background: #2ecc71; }
+
+  /* Search bar */
+  .search-section {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 10px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .search-row input {
+    flex: 1;
+    padding: 10px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  .search-row input:focus { border-color: var(--primary); }
+
+  .search-row select {
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    outline: none;
+    background: white;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: #ecf0f1;
+    color: var(--text);
+  }
+  .btn-secondary:hover { background: #dce1e7; }
+
+  .btn-gmail {
+    background: #4285f4;
+    color: white;
+    font-size: 1rem;
+    padding: 12px 24px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+  .btn-gmail:hover { background: #3367d6; }
+  .btn-gmail:disabled { background: #ccc; cursor: not-allowed; }
+
+  .btn-copy {
+    background: #ecf0f1;
+    color: var(--text);
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 6px;
+  }
+  .btn-copy:hover { background: #dce1e7; }
+
+  /* Main layout */
+  .main-layout {
+    display: flex;
+    height: calc(100vh - 121px);
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* Job list panel */
+  .jobs-panel {
+    width: 360px;
+    min-width: 320px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    background: white;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .jobs-panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: #fafafa;
+    flex-shrink: 0;
+  }
+
+  .job-card {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .job-card:hover { background: var(--primary-light); }
+  .job-card.active { background: var(--primary-light); border-left: 3px solid var(--primary); }
+
+  .job-card-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+
+  .job-card-company {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .job-card-date {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .load-more-wrap {
+    padding: 12px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    gap: 12px;
+    padding: 40px;
+    text-align: center;
+  }
+
+  .empty-state .icon { font-size: 3rem; }
+  .empty-state h3 { font-size: 1.1rem; color: var(--text); }
+  .empty-state p { font-size: 0.9rem; line-height: 1.6; }
+
+  /* Job header */
+  .job-header-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .job-header-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .job-header-card .company-name {
+    font-size: 1rem;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .job-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .meta-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .meta-chip.email { color: var(--blue); cursor: pointer; }
+  .meta-chip.email:hover { background: #e8f0fe; }
+
+  .view-original-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 12px;
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .view-original-link:hover { text-decoration: underline; }
+
+  /* Requirements card */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fafafa;
+  }
+
+  .card-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-body { padding: 16px 20px; }
+
+  .checklist {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  .checklist-item:hover { background: #f9f9f9; }
+  .checklist-item.checked { background: #f0faf4; border-color: #a8d5b5; }
+
+  .checklist-item input[type="checkbox"] {
+    width: 18px; height: 18px;
+    accent-color: var(--success);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .checklist-item-text {
+    flex: 1;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  .checklist-item.checked .checklist-item-text {
+    color: var(--success);
+  }
+
+  .checklist-category {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--primary-light);
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .checklist-progress {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .progress-bar-wrap {
+    background: var(--border);
+    border-radius: 10px;
+    height: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--success);
+    border-radius: 10px;
+    transition: width 0.3s;
+  }
+
+  /* Cover letter card */
+  .cover-letter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  #coverLetterText {
+    width: 100%;
+    min-height: 280px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    line-height: 1.7;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  #coverLetterText:focus { border-color: var(--primary); }
+
+  .gmail-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .gmail-to-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+
+  .gmail-to-row label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .gmail-to-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+
+  .gmail-to-row input:focus { border-color: var(--blue); }
+
+  .subject-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+
+  .subject-row label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .subject-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+
+  .subject-row input:focus { border-color: var(--blue); }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2.5px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: white;
+    border-radius: var(--radius);
+    width: 500px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+  }
+
+  .modal-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-header h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .modal-close:hover { background: var(--bg); }
+
+  .modal-body { padding: 20px 24px; }
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus { border-color: var(--primary); }
+
+  .form-group .hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--text);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    z-index: 300;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main-layout { flex-direction: column; height: auto; }
+    .jobs-panel { width: 100%; min-width: unset; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .detail-panel { padding: 16px; }
+    .search-row { flex-wrap: wrap; }
+    .search-row select { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1><span class="logo">JUMP</span> 求職助手</h1>
+    <div class="header-subtitle">自動分析職位要求 · 生成繁體中文求職信</div>
+  </div>
+  <button id="profileBtn" onclick="openProfile()">
+    <div class="profile-dot" id="profileDot"></div>
+    我的求職檔案
+  </button>
+</header>
+
+<div class="search-section">
+  <div class="search-row">
+    <input id="searchInput" type="text" placeholder="搜尋職位、公司或關鍵字…" onkeydown="if(event.key==='Enter') doSearch()">
+    <select id="industrySelect">
+      <option value="">所有行業</option>
+      <option value="4">醫療/美容護理</option>
+      <option value="32">社會服務/非牟利機構</option>
+      <option value="10">教育</option>
+      <option value="15">銀行/金融</option>
+      <option value="21">資訊科技</option>
+      <option value="1">行政/人力資源</option>
+      <option value="3">廣告/公共關係</option>
+      <option value="5">建築/測量/工程</option>
+      <option value="6">會計/審計</option>
+      <option value="7">物流/運輸</option>
+      <option value="8">酒店/飲食</option>
+      <option value="9">保險</option>
+      <option value="11">法律</option>
+      <option value="12">市場推廣/銷售</option>
+      <option value="14">零售</option>
+      <option value="16">製造業</option>
+    </select>
+    <button class="btn btn-primary" onclick="doSearch()">搜尋</button>
+  </div>
+</div>
+
+<div class="main-layout">
+  <!-- Jobs panel -->
+  <div class="jobs-panel" id="jobsPanel">
+    <div class="jobs-panel-header" id="jobsPanelHeader">輸入關鍵字搜尋職位</div>
+    <div id="jobsList"></div>
+    <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
+      <button class="btn btn-secondary" onclick="loadMore()">載入更多</button>
+    </div>
+  </div>
+
+  <!-- Detail panel -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">🔍</div>
+      <h3>搜尋並選擇職位</h3>
+      <p>在左方搜尋職位，點擊後系統將自動分析職位要求<br>並生成個人化求職信</p>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📋 我的求職檔案</h2>
+      <button class="modal-close" onclick="closeProfile()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:16px">
+        填寫你的資料，系統將自動用於生成個人化求職信。資料只存於本機，不會上傳。
+      </p>
+      <div class="form-group">
+        <label>姓名</label>
+        <input id="p_name" type="text" placeholder="例：陳大文">
+      </div>
+      <div class="form-group">
+        <label>學歷</label>
+        <input id="p_education" type="text" placeholder="例：香港大學 工商管理學士">
+      </div>
+      <div class="form-group">
+        <label>工作經驗</label>
+        <textarea id="p_experience" rows="3" placeholder="例：5年市場推廣經驗，曾任職XX公司市場部主任，負責品牌推廣及數碼營銷"></textarea>
+      </div>
+      <div class="form-group">
+        <label>技能</label>
+        <textarea id="p_skills" rows="2" placeholder="例：Microsoft Office, Cantonese/Mandarin/English, Photoshop, 項目管理"></textarea>
+      </div>
+      <div class="form-group">
+        <label>其他資料</label>
+        <textarea id="p_other" rows="2" placeholder="例：具備香港駕駛執照，可即時上班，接受輪班工作"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeProfile()">取消</button>
+      <button class="btn btn-primary" onclick="saveProfile()">儲存檔案</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// State
+let state = {
+  jobs: [],
+  currentPage: 1,
+  hasNextPage: false,
+  activeJobId: null,
+  lastQuery: { q: '', industryId: '' },
+  checklistData: [],
+  coverLetter: '',
+  jobEmail: '',
+  jobTitle: '',
+  jobCompany: '',
+  jobUrl: ''
+};
+
+// Profile
+function loadProfile() {
+  const p = JSON.parse(localStorage.getItem('jumpProfile') || '{}');
+  if (p.name) document.getElementById('p_name').value = p.name;
+  if (p.education) document.getElementById('p_education').value = p.education;
+  if (p.experience) document.getElementById('p_experience').value = p.experience;
+  if (p.skills) document.getElementById('p_skills').value = p.skills;
+  if (p.other) document.getElementById('p_other').value = p.other;
+  updateProfileDot(!!p.name);
+  return p;
+}
+
+function saveProfile() {
+  const p = {
+    name: document.getElementById('p_name').value.trim(),
+    education: document.getElementById('p_education').value.trim(),
+    experience: document.getElementById('p_experience').value.trim(),
+    skills: document.getElementById('p_skills').value.trim(),
+    other: document.getElementById('p_other').value.trim()
+  };
+  localStorage.setItem('jumpProfile', JSON.stringify(p));
+  updateProfileDot(!!p.name);
+  closeProfile();
+  showToast('✅ 求職檔案已儲存');
+}
+
+function updateProfileDot(isSet) {
+  const dot = document.getElementById('profileDot');
+  dot.className = 'profile-dot' + (isSet ? ' set' : '');
+}
+
+function openProfile() {
+  loadProfile();
+  document.getElementById('profileModal').classList.add('open');
+}
+
+function closeProfile() {
+  document.getElementById('profileModal').classList.remove('open');
+}
+
+// Search
+async function doSearch(resetPage = true) {
+  const q = document.getElementById('searchInput').value.trim();
+  const industryId = document.getElementById('industrySelect').value;
+
+  if (!q && !industryId) {
+    showToast('請輸入搜尋關鍵字或選擇行業');
+    return;
+  }
+
+  if (resetPage) {
+    state.jobs = [];
+    state.currentPage = 1;
+    state.lastQuery = { q, industryId };
+  }
+
+  const listEl = document.getElementById('jobsList');
+  const headerEl = document.getElementById('jobsPanelHeader');
+
+  if (resetPage) {
+    listEl.innerHTML = `<div class="loading"><div class="spinner"></div>搜尋中…</div>`;
+  }
+
+  try {
+    const params = new URLSearchParams({ q, industryId, page: state.currentPage });
+    const resp = await fetch(`/api/search?${params}`);
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    if (resetPage) {
+      state.jobs = data.jobs;
+      listEl.innerHTML = '';
+    } else {
+      state.jobs = [...state.jobs, ...data.jobs];
+    }
+
+    state.hasNextPage = data.hasNextPage;
+    headerEl.textContent = `找到 ${state.jobs.length} 個職位`;
+
+    if (state.jobs.length === 0) {
+      listEl.innerHTML = `<div class="loading" style="justify-content:center;padding:30px;flex-direction:column;gap:8px;">
+        <div style="font-size:2rem">😕</div>
+        <div>未找到相關職位</div>
+      </div>`;
+    } else {
+      if (resetPage) {
+        renderJobList();
+      } else {
+        appendJobList(data.jobs);
+      }
+    }
+
+    document.getElementById('loadMoreWrap').style.display = state.hasNextPage ? 'block' : 'none';
+  } catch (err) {
+    listEl.innerHTML = `<div class="loading" style="color:#e74c3c;flex-direction:column;gap:8px;padding:20px">
+      <div>⚠️ 搜尋失敗</div>
+      <div style="font-size:0.8rem">${err.message}</div>
+    </div>`;
+  }
+}
+
+function renderJobList() {
+  const listEl = document.getElementById('jobsList');
+  listEl.innerHTML = '';
+  state.jobs.forEach(job => {
+    listEl.appendChild(createJobCard(job));
+  });
+}
+
+function appendJobList(jobs) {
+  const listEl = document.getElementById('jobsList');
+  jobs.forEach(job => {
+    listEl.appendChild(createJobCard(job));
+  });
+}
+
+function createJobCard(job) {
+  const el = document.createElement('div');
+  el.className = 'job-card' + (job.adId === state.activeJobId ? ' active' : '');
+  el.id = `card-${job.adId}`;
+  el.innerHTML = `
+    <div class="job-card-title">${escHtml(job.title)}</div>
+    <div class="job-card-company">${escHtml(job.company || '—')}</div>
+    <div class="job-card-date">${escHtml(job.date || '')}</div>
+  `;
+  el.addEventListener('click', () => loadJobDetail(job));
+  return el;
+}
+
+async function loadMore() {
+  state.currentPage++;
+  await doSearch(false);
+}
+
+// Job detail
+async function loadJobDetail(job) {
+  // Update active card
+  document.querySelectorAll('.job-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById(`card-${job.adId}`);
+  if (card) card.classList.add('active');
+  state.activeJobId = job.adId;
+
+  const detailPanel = document.getElementById('detailPanel');
+  detailPanel.innerHTML = `
+    <div class="loading"><div class="spinner"></div>載入職位詳情中…</div>
+  `;
+
+  try {
+    // Fetch job detail
+    const resp = await fetch(`/api/job/${job.adId}`);
+    const jobData = await resp.json();
+
+    if (jobData.error) throw new Error(jobData.error);
+
+    state.jobTitle = jobData.title || job.title;
+    state.jobCompany = jobData.company || job.company;
+    state.jobEmail = jobData.email || '';
+    state.jobUrl = jobData.url;
+
+    // Render job header
+    detailPanel.innerHTML = renderJobHeader(jobData, job);
+
+    // Parse requirements
+    renderParsingSection(detailPanel);
+    await parseJobRequirements(jobData, detailPanel);
+
+  } catch (err) {
+    detailPanel.innerHTML = `
+      <div class="card">
+        <div class="card-body" style="color:#e74c3c;padding:20px">
+          ⚠️ 載入失敗：${escHtml(err.message)}
+        </div>
+      </div>
+    `;
+  }
+}
+
+function renderJobHeader(jobData, job) {
+  const title = escHtml(jobData.title || job.title || '');
+  const company = escHtml(jobData.company || job.company || '');
+  const email = jobData.email;
+  const url = jobData.url;
+
+  let metaChips = '';
+  const meta = jobData.meta || {};
+  const importantKeys = ['薪酬', '工作地區', '僱用形式', '教育程度', 'Salary', 'Location', 'Employment Type'];
+  for (const [k, v] of Object.entries(meta)) {
+    if (importantKeys.some(ik => k.includes(ik)) && v && v !== '—') {
+      metaChips += `<div class="meta-chip">📍 ${escHtml(k)}: ${escHtml(v)}</div>`;
+    }
+  }
+
+  if (email) {
+    metaChips += `<div class="meta-chip email" onclick="setEmail('${escAttr(email)}')">✉️ ${escHtml(email)}</div>`;
+  }
+
+  return `
+    <div class="job-header-card" id="jobHeader">
+      <h2>${title}</h2>
+      <div class="company-name">🏢 ${company}</div>
+      ${metaChips ? `<div class="job-meta-grid">${metaChips}</div>` : ''}
+      ${url ? `<a class="view-original-link" href="${escAttr(url)}" target="_blank">🔗 查看原始廣告</a>` : ''}
+    </div>
+    <div id="dynamicSections"></div>
+  `;
+}
+
+function renderParsingSection(detailPanel) {
+  const dynSections = document.getElementById('dynamicSections');
+  if (!dynSections) return;
+  dynSections.innerHTML = `
+    <div class="card">
+      <div class="card-header"><h3>📋 職位要求分析</h3></div>
+      <div class="card-body">
+        <div class="loading"><div class="spinner"></div>AI 分析職位要求中…</div>
+      </div>
+    </div>
+  `;
+}
+
+async function parseJobRequirements(jobData, detailPanel) {
+  try {
+    const resp = await fetch('/api/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobText: jobData.bodyText,
+        sections: jobData.sections,
+        title: jobData.title,
+        company: jobData.company
+      })
+    });
+    const parsed = await resp.json();
+
+    if (parsed.error) {
+      const errMsg = parsed.error.includes('apiKey') || parsed.error.includes('auth')
+        ? 'Anthropic API Key 未設定。請在 .env 檔案中設定 ANTHROPIC_API_KEY'
+        : parsed.error;
+      throw new Error(errMsg);
+    }
+
+    state.checklistData = parsed.requirements || [];
+    if (parsed.contactEmail && !state.jobEmail) state.jobEmail = parsed.contactEmail;
+
+    const dynSections = document.getElementById('dynamicSections');
+    if (!dynSections) return;
+
+    // Render requirements checklist
+    dynSections.innerHTML = renderChecklist(parsed) + `
+      <div class="card" id="coverLetterCard">
+        <div class="card-header">
+          <h3>✉️ 求職信</h3>
+          <div class="cover-letter-actions">
+            <button class="btn btn-copy" onclick="regenerateLetter()">🔄 重新生成</button>
+            <button class="btn btn-copy" onclick="copyLetter()">📋 複製</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="loading" id="letterLoading"><div class="spinner"></div>AI 生成求職信中…</div>
+          <textarea id="coverLetterText" style="display:none"></textarea>
+          <div class="gmail-section" id="gmailSection" style="display:none">
+            <div class="gmail-to-row">
+              <label>收件人</label>
+              <input id="gmailTo" type="email" placeholder="招聘負責人電郵地址" value="${escAttr(state.jobEmail)}">
+            </div>
+            <div class="subject-row">
+              <label>主&emsp;&emsp;題</label>
+              <input id="gmailSubject" type="text" value="">
+            </div>
+            <button class="btn btn-gmail" onclick="openGmail()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.910 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg>
+              一鍵開啟 Gmail 發送求職信
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    updateChecklistProgress();
+    await generateCoverLetter(parsed);
+
+  } catch (err) {
+    const dynSections = document.getElementById('dynamicSections');
+    if (dynSections) {
+      dynSections.innerHTML = `
+        <div class="card">
+          <div class="card-body" style="color:#e74c3c;padding:20px">
+            ⚠️ AI 分析失敗：${escHtml(err.message)}
+          </div>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderChecklist(parsed) {
+  const requirements = parsed.requirements || [];
+  if (requirements.length === 0) {
+    return `<div class="card">
+      <div class="card-header"><h3>📋 職位要求</h3></div>
+      <div class="card-body"><p style="color:var(--text-muted);font-size:0.9rem">未能提取職位要求，請查看原始廣告。</p></div>
+    </div>`;
+  }
+
+  const items = requirements.map((r, i) => `
+    <li class="checklist-item" id="ci-${i}" onclick="toggleCheck(${i})">
+      <input type="checkbox" id="cb-${i}" onchange="updateChecklistProgress()" onclick="event.stopPropagation()">
+      <div class="checklist-category">${escHtml(r.category || '要求')}</div>
+      <div class="checklist-item-text">${escHtml(r.item)}</div>
+    </li>
+  `).join('');
+
+  const salaryChip = parsed.salaryRange ? `<div class="meta-chip">💰 ${escHtml(parsed.salaryRange)}</div>` : '';
+  const locChip = parsed.location ? `<div class="meta-chip">📍 ${escHtml(parsed.location)}</div>` : '';
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <h3>📋 職位要求核對清單</h3>
+        <div class="checklist-progress" id="checklistProgress">0 / ${requirements.length}</div>
+      </div>
+      <div class="card-body">
+        ${(salaryChip || locChip) ? `<div class="job-meta-grid" style="margin-bottom:14px">${salaryChip}${locChip}</div>` : ''}
+        <div class="progress-bar-wrap" style="margin-bottom:14px">
+          <div class="progress-bar" id="progressBar" style="width:0%"></div>
+        </div>
+        <ul class="checklist" id="checklist">${items}</ul>
+      </div>
+    </div>
+  `;
+}
+
+function toggleCheck(i) {
+  const cb = document.getElementById(`cb-${i}`);
+  const item = document.getElementById(`ci-${i}`);
+  cb.checked = !cb.checked;
+  item.classList.toggle('checked', cb.checked);
+  updateChecklistProgress();
+}
+
+function updateChecklistProgress() {
+  const items = document.querySelectorAll('#checklist .checklist-item');
+  if (!items.length) return;
+  const checked = document.querySelectorAll('#checklist input[type=checkbox]:checked').length;
+  const total = items.length;
+  const pct = Math.round((checked / total) * 100);
+  const progressEl = document.getElementById('checklistProgress');
+  const barEl = document.getElementById('progressBar');
+  if (progressEl) progressEl.textContent = `${checked} / ${total}`;
+  if (barEl) {
+    barEl.style.width = pct + '%';
+    barEl.style.background = pct === 100 ? 'var(--success)' : pct > 50 ? 'var(--warning)' : 'var(--primary)';
+  }
+  // Sync item checked class
+  items.forEach((item, idx) => {
+    const cb = document.getElementById(`cb-${idx}`);
+    if (cb) item.classList.toggle('checked', cb.checked);
+  });
+}
+
+async function generateCoverLetter() {
+  const profile = JSON.parse(localStorage.getItem('jumpProfile') || '{}');
+  const requirements = state.checklistData;
+
+  try {
+    const resp = await fetch('/api/generate-letter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobTitle: state.jobTitle,
+        company: state.jobCompany,
+        requirements,
+        responsibilities: [],
+        profile
+      })
+    });
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    state.coverLetter = data.letter;
+
+    const loadingEl = document.getElementById('letterLoading');
+    const textEl = document.getElementById('coverLetterText');
+    const gmailEl = document.getElementById('gmailSection');
+
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (textEl) {
+      textEl.style.display = 'block';
+      textEl.value = data.letter;
+    }
+    if (gmailEl) {
+      gmailEl.style.display = 'block';
+      // Set default subject
+      const subjectEl = document.getElementById('gmailSubject');
+      if (subjectEl) subjectEl.value = `應徵 ${state.jobTitle} 一職`;
+      // Set email from job
+      const toEl = document.getElementById('gmailTo');
+      if (toEl && state.jobEmail) toEl.value = state.jobEmail;
+    }
+
+  } catch (err) {
+    const loadingEl = document.getElementById('letterLoading');
+    if (loadingEl) {
+      loadingEl.innerHTML = `<span style="color:#e74c3c">⚠️ 生成失敗：${escHtml(err.message)}</span>`;
+    }
+  }
+}
+
+async function regenerateLetter() {
+  const loadingEl = document.getElementById('letterLoading');
+  const textEl = document.getElementById('coverLetterText');
+  const gmailEl = document.getElementById('gmailSection');
+
+  if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.innerHTML = '<div class="spinner"></div>重新生成中…'; }
+  if (textEl) textEl.style.display = 'none';
+  if (gmailEl) gmailEl.style.display = 'none';
+
+  await generateCoverLetter();
+}
+
+function copyLetter() {
+  const textEl = document.getElementById('coverLetterText');
+  if (!textEl || !textEl.value) return;
+  navigator.clipboard.writeText(textEl.value).then(() => showToast('✅ 求職信已複製到剪貼板'));
+}
+
+function openGmail() {
+  const to = document.getElementById('gmailTo')?.value?.trim() || '';
+  const subject = document.getElementById('gmailSubject')?.value?.trim() || `應徵 ${state.jobTitle} 一職`;
+  const body = document.getElementById('coverLetterText')?.value || state.coverLetter;
+
+  if (!body) {
+    showToast('⚠️ 請等待求職信生成');
+    return;
+  }
+
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1${to ? `&to=${encodeURIComponent(to)}` : ''}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(gmailUrl, '_blank');
+}
+
+function setEmail(email) {
+  state.jobEmail = email;
+  const toEl = document.getElementById('gmailTo');
+  if (toEl) toEl.value = email;
+  showToast(`✅ 收件人已設為 ${email}`);
+}
+
+// Utils
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(s) {
+  return String(s || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Close modal on overlay click
+document.getElementById('profileModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeProfile();
+});
+
+// Init
+loadProfile();
+</script>
+</body>
+</html>
