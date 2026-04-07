@@ -6,7 +6,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(require('path').join(__dirname, 'public')));
 
 if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === 'your_api_key_here') {
   console.error('\n❌ ERROR: ANTHROPIC_API_KEY not set in .env file');
