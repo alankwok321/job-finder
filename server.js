@@ -334,6 +334,7 @@ Yours faithfully,
 ===
 
 === SUBSTITUTION VALUES ===
+NOTE: if any value below contains Chinese characters, translate it to English before inserting it.
 {NAME}      = ${profile?.name || '[Your Name]'}
 {PHONE}     = ${profile?.phone || '[Phone]'}
 {EMAIL}     = ${profile?.email || '[Email]'}
@@ -355,6 +356,7 @@ ${profileText}
 - Paragraph 2 (the main paragraph): go through the job's specific criteria one by one and directly match them to the applicant's actual qualifications, experience, and skills from the profile above. Only cite facts that appear in the applicant's profile — do not invent or assume anything. If a criterion has no matching info in the profile, skip it.
 - Paragraph 3: one or two sentences — express enthusiasm and invite an interview
 - Formal English, confident tone
+- IMPORTANT: translate ALL Chinese characters to English throughout the entire letter — this includes the job title, school name, company name, address, subject names, qualifications, and any other text. No Chinese characters should appear anywhere in the output.
 - Do NOT include any headers, labels, or markdown — plain text only`);
 
     res.json({ letter: letter.trim() });
