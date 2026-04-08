@@ -14,7 +14,7 @@ if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_a
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const gemini = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+const gemini = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
 async function ask(prompt) {
   const result = await gemini.generateContent(prompt);
