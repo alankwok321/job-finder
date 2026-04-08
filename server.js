@@ -342,7 +342,7 @@ Yours faithfully,
 {ADDRESS}   = ${address || ''}
 {DATE}      = ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
 {JOBTITLE}  = ${jobTitle}
-{ENCLOSURE} = determine from the job requirements below — always include "Resume", then add others the job asks for such as "Certificates", "Academic Transcripts", "Teaching Certificate", "Reference Letter", etc. Format as a comma-separated list e.g. "Resume, Certificates, Academic Transcripts"
+{ENCLOSURE} = list ONLY the documents explicitly requested or required by this specific job post. Do not add anything not mentioned in the requirements. Format as a comma-separated list e.g. "Resume, Certificates"
 
 === JOB REQUIREMENTS (use these to write {BODY} and determine {ENCLOSURE}) ===
 ${requirementsText}
