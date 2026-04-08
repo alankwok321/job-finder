@@ -791,7 +791,9 @@ let state = {
   jobEmail: '',
   jobTitle: '',
   jobCompany: '',
-  jobUrl: ''
+  jobUrl: '',
+  resumeFile: null,      // File object from upload
+  resumeName: ''         // original filename
 };
 
 // Profile
@@ -838,6 +840,9 @@ function handleResumeDrop(e) {
 
 async function uploadResume(file) {
   if (!file) return;
+  // Keep the file object so we can offer it as a download when sending
+  state.resumeFile = file;
+  state.resumeName = file.name;
   const area = document.getElementById('resumeUploadArea');
   const content = document.getElementById('resumeUploadContent');
 
@@ -1147,8 +1152,11 @@ async function parseJobRequirements(jobData, detailPanel) {
             </div>
             <button class="btn btn-gmail" onclick="openGmail()">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.910 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg>
-              一鍵開啟 Gmail 發送求職信
+              一鍵開啟 Gmail 發送求職信 + 下載履歷
             </button>
+            <div id="resumeAttachHint" style="display:none;margin-top:10px;padding:10px 14px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;font-size:0.85rem;color:#1b5e20">
+              📎 <strong id="resumeAttachName"></strong> is downloading — drag it into Gmail as an attachment.
+            </div>
           </div>
         </div>
       </div>
@@ -1384,7 +1392,7 @@ function copyLetter() {
 
 function openGmail() {
   const to = document.getElementById('gmailTo')?.value?.trim() || '';
-  const subject = document.getElementById('gmailSubject')?.value?.trim() || `應徵 ${state.jobTitle} 一職`;
+  const subject = document.getElementById('gmailSubject')?.value?.trim() || `Application for ${state.jobTitle}`;
   const body = document.getElementById('coverLetterText')?.value || state.coverLetter;
 
   if (!body) {
@@ -1392,8 +1400,26 @@ function openGmail() {
     return;
   }
 
+  // Open Gmail compose
   const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1${to ? `&to=${encodeURIComponent(to)}` : ''}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.open(gmailUrl, '_blank');
+
+  // Auto-download the resume so user can attach it in Gmail
+  if (state.resumeFile) {
+    const url = URL.createObjectURL(state.resumeFile);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = state.resumeName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+    const hint = document.getElementById('resumeAttachHint');
+    const nameEl = document.getElementById('resumeAttachName');
+    if (hint) hint.style.display = 'block';
+    if (nameEl) nameEl.textContent = state.resumeName;
+  }
 }
 
 function setEmail(email) {
