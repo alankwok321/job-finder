@@ -350,10 +350,10 @@ ${requirementsText}
 ${profileText}
 
 === INSTRUCTIONS FOR {BODY} ===
-- 3 short paragraphs, 250-350 words total
-- Paragraph 1: express interest and state that the post was seen on JUMP
-- Paragraph 2: address how your qualifications and experience meet the key requirements above
-- Paragraph 3: express enthusiasm for the school/organisation and invite an interview
+- 3 focused paragraphs, 220-320 words total
+- Paragraph 1: one sentence — state interest in the post as seen on JUMP
+- Paragraph 2 (the main paragraph): go through the job's specific criteria one by one and directly match them to the applicant's actual qualifications, experience, and skills from the profile above. Only cite facts that appear in the applicant's profile — do not invent or assume anything. If a criterion has no matching info in the profile, skip it.
+- Paragraph 3: one or two sentences — express enthusiasm and invite an interview
 - Formal English, confident tone
 - Do NOT include any headers, labels, or markdown — plain text only`);
 
