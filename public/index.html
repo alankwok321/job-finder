@@ -236,6 +236,104 @@
     flex-shrink: 0;
   }
 
+  /* Panel tabs */
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: #fafafa;
+    flex-shrink: 0;
+  }
+
+  .panel-tab {
+    flex: 1;
+    padding: 10px 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .panel-tab:hover { color: var(--primary); background: var(--primary-light); }
+  .panel-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: white; }
+
+  .panel-tab .tab-badge {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    padding: 1px 5px;
+    margin-left: 3px;
+    vertical-align: middle;
+    line-height: 1.4;
+  }
+
+  /* Star button on job cards */
+  .job-card {
+    position: relative;
+  }
+
+  .star-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: #ccc;
+    transition: color 0.15s, transform 0.1s;
+    z-index: 1;
+  }
+
+  .star-btn:hover { color: #f39c12; transform: scale(1.2); }
+  .star-btn.starred { color: #f39c12; }
+
+  /* History items */
+  .history-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .history-item:hover { background: var(--primary-light); }
+
+  .history-sent-badge {
+    display: inline-block;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+  }
+
+  .history-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  .empty-panel {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  .empty-panel .icon { font-size: 2rem; margin-bottom: 10px; }
+
   /* Detail panel */
   .detail-panel {
     flex: 1;
@@ -701,11 +799,18 @@
 <div class="main-layout">
   <!-- Jobs panel -->
   <div class="jobs-panel" id="jobsPanel">
+    <div class="panel-tabs" id="panelTabs">
+      <div class="panel-tab active" id="tab-search" onclick="showTab('search')">搜尋結果</div>
+      <div class="panel-tab" id="tab-starred" onclick="showTab('starred')">★ 已加星 <span class="tab-badge" id="starredBadge" style="display:none">0</span></div>
+      <div class="panel-tab" id="tab-history" onclick="showTab('history')">📨 已發送 <span class="tab-badge" id="historyBadge" style="display:none">0</span></div>
+    </div>
     <div class="jobs-panel-header" id="jobsPanelHeader">輸入關鍵字搜尋職位</div>
     <div id="jobsList"></div>
     <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
       <button class="btn btn-secondary" onclick="loadMore()">載入更多</button>
     </div>
+    <div id="starredList" style="display:none"></div>
+    <div id="historyList" style="display:none"></div>
   </div>
 
   <!-- Detail panel -->
@@ -793,8 +898,131 @@ let state = {
   jobCompany: '',
   jobUrl: '',
   resumeFile: null,      // File object from upload
-  resumeName: ''         // original filename
+  resumeName: '',        // original filename
+  activeTab: 'search'
 };
+
+// ── Starred / Bookmarks ──────────────────────────────────────────────────
+function getStarred() { return JSON.parse(localStorage.getItem('jumpStarred') || '[]'); }
+function saveStarred(arr) { localStorage.setItem('jumpStarred', JSON.stringify(arr)); }
+
+function isStarred(adId) { return getStarred().some(j => j.adId === adId); }
+
+function toggleStar(adId, e) {
+  e.stopPropagation();
+  const arr = getStarred();
+  const idx = arr.findIndex(j => j.adId === adId);
+  if (idx === -1) {
+    // Find job data from current list
+    const job = state.jobs.find(j => j.adId === adId);
+    if (job) arr.push({ adId: job.adId, title: job.title, company: job.company, date: job.date });
+    showToast('★ 已加入書籤');
+  } else {
+    arr.splice(idx, 1);
+    showToast('已移除書籤');
+  }
+  saveStarred(arr);
+  updateTabBadges();
+  // Update star button appearance in both search and starred lists
+  document.querySelectorAll(`#card-${adId} .star-btn, #scard-${adId} .star-btn`).forEach(btn => {
+    btn.classList.toggle('starred', isStarred(adId));
+    btn.title = isStarred(adId) ? 'Remove bookmark' : 'Bookmark';
+  });
+  // Re-render starred list if visible
+  if (state.activeTab === 'starred') renderStarredList();
+}
+
+function renderStarredList() {
+  const el = document.getElementById('starredList');
+  const arr = getStarred();
+  if (arr.length === 0) {
+    el.innerHTML = `<div class="empty-panel"><div class="icon">☆</div>尚未加入書籤<br><small>在搜尋結果中點擊 ★ 即可收藏</small></div>`;
+    return;
+  }
+  el.innerHTML = arr.slice().reverse().map(job => `
+    <div class="job-card${job.adId === state.activeJobId ? ' active' : ''}" id="scard-${job.adId}" onclick="loadJobDetail(${JSON.stringify(job).split('"').join('&quot;')})">
+      <div style="padding-right:28px">
+        <div class="job-card-title">${escHtml(job.title)}</div>
+        <div class="job-card-company">${escHtml(job.company || '—')}</div>
+        <div class="job-card-date">${escHtml(job.date || '')}</div>
+      </div>
+      <button class="star-btn starred" title="Remove bookmark" onclick="toggleStar('${escAttr(job.adId)}', event)">★</button>
+    </div>
+  `).join('');
+}
+
+// ── Send History ─────────────────────────────────────────────────────────
+function getSendHistory() { return JSON.parse(localStorage.getItem('jumpSendHistory') || '[]'); }
+function saveSendHistory(arr) { localStorage.setItem('jumpSendHistory', JSON.stringify(arr)); }
+
+function recordSendHistory() {
+  const arr = getSendHistory();
+  arr.push({
+    adId: state.activeJobId,
+    title: state.jobTitle,
+    company: state.jobCompany,
+    email: document.getElementById('gmailTo')?.value?.trim() || state.jobEmail,
+    sentAt: new Date().toISOString()
+  });
+  saveSendHistory(arr);
+  updateTabBadges();
+  if (state.activeTab === 'history') renderHistoryList();
+  showToast('📨 已記錄發送記錄');
+}
+
+function renderHistoryList() {
+  const el = document.getElementById('historyList');
+  const arr = getSendHistory();
+  if (arr.length === 0) {
+    el.innerHTML = `<div class="empty-panel"><div class="icon">📨</div>尚無發送記錄<br><small>點擊「一鍵開啟 Gmail」後自動記錄</small></div>`;
+    return;
+  }
+  el.innerHTML = arr.slice().reverse().map(h => {
+    const d = new Date(h.sentAt);
+    const dateStr = d.toLocaleDateString('zh-TW') + ' ' + d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    const job = { adId: h.adId, title: h.title, company: h.company };
+    return `
+      <div class="history-item${h.adId === state.activeJobId ? ' active' : ''}" onclick="loadJobDetail(${JSON.stringify(job).split('"').join('&quot;')})">
+        <span class="history-sent-badge">📨 已發送</span>
+        <div class="job-card-title">${escHtml(h.title || '—')}</div>
+        <div class="job-card-company">${escHtml(h.company || '—')}</div>
+        ${h.email ? `<div class="job-card-date" style="color:var(--blue)">✉️ ${escHtml(h.email)}</div>` : ''}
+        <div class="history-date">發送時間：${dateStr}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────
+function showTab(tab) {
+  state.activeTab = tab;
+  ['search', 'starred', 'history'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+  const header = document.getElementById('jobsPanelHeader');
+  const jobsList = document.getElementById('jobsList');
+  const loadMore = document.getElementById('loadMoreWrap');
+  const starredList = document.getElementById('starredList');
+  const historyList = document.getElementById('historyList');
+
+  header.style.display = tab === 'search' ? '' : 'none';
+  jobsList.style.display = tab === 'search' ? '' : 'none';
+  loadMore.style.display = tab === 'search' && state.hasNextPage ? 'block' : 'none';
+  starredList.style.display = tab === 'starred' ? '' : 'none';
+  historyList.style.display = tab === 'history' ? '' : 'none';
+
+  if (tab === 'starred') renderStarredList();
+  if (tab === 'history') renderHistoryList();
+}
+
+function updateTabBadges() {
+  const starredCount = getStarred().length;
+  const historyCount = getSendHistory().length;
+  const sb = document.getElementById('starredBadge');
+  const hb = document.getElementById('historyBadge');
+  if (sb) { sb.textContent = starredCount; sb.style.display = starredCount ? '' : 'none'; }
+  if (hb) { hb.textContent = historyCount; hb.style.display = historyCount ? '' : 'none'; }
+}
 
 // Profile
 function loadProfile() {
@@ -965,10 +1193,14 @@ function createJobCard(job) {
   const el = document.createElement('div');
   el.className = 'job-card' + (job.adId === state.activeJobId ? ' active' : '');
   el.id = `card-${job.adId}`;
+  const starred = isStarred(job.adId);
   el.innerHTML = `
-    <div class="job-card-title">${escHtml(job.title)}</div>
-    <div class="job-card-company">${escHtml(job.company || '—')}</div>
-    <div class="job-card-date">${escHtml(job.date || '')}</div>
+    <div style="padding-right:28px">
+      <div class="job-card-title">${escHtml(job.title)}</div>
+      <div class="job-card-company">${escHtml(job.company || '—')}</div>
+      <div class="job-card-date">${escHtml(job.date || '')}</div>
+    </div>
+    <button class="star-btn${starred ? ' starred' : ''}" title="${starred ? 'Remove bookmark' : 'Bookmark'}" onclick="toggleStar('${escAttr(job.adId)}', event)">★</button>
   `;
   el.addEventListener('click', () => loadJobDetail(job));
   return el;
@@ -1403,6 +1635,7 @@ function openGmail() {
 
   const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1${to ? `&to=${encodeURIComponent(to)}` : ''}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.open(gmailUrl, '_blank');
+  recordSendHistory();
 }
 
 function setEmail(email) {
@@ -1435,6 +1668,7 @@ document.getElementById('profileModal').addEventListener('click', e => {
 
 // Init
 loadProfile();
+updateTabBadges();
 </script>
 </body>
 </html>
