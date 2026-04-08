@@ -253,8 +253,8 @@ ${profileText}
 Write a professional English cover letter that includes:
 1. Applicant's name and contact details at the top (use placeholders if not provided)
 2. Today's date
-3. The company name${address ? ` and address (${address})` : ''}
-4. Salutation addressed to ${principal || 'the Hiring Manager'} by name if known
+3. The company name${address ? ` and address on a single line: "${address}"` : ''}
+4. Salutation using only the recipient's surname (e.g. "Dear Mr Tam," not the full name) — if no principal provided, use "Dear Hiring Manager,"
 5. Opening paragraph stating the position applied for
 6. Body paragraphs addressing how the applicant meets each key requirement
 7. Expression of genuine interest in the role and company
@@ -264,6 +264,7 @@ Requirements:
 - Written in formal English
 - Professional and confident tone
 - 300-400 words
+- Address must be written on a single line, not split across multiple lines
 - Output the cover letter text only, no extra commentary`);
 
     res.json({ letter: letter.trim() });
