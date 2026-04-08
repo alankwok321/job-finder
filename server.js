@@ -329,6 +329,8 @@ Application for the Post of {JOBTITLE}
 
 Yours faithfully,
 {NAME}
+
+[Enclosure]: {ENCLOSURE}
 ===
 
 === SUBSTITUTION VALUES ===
@@ -340,8 +342,9 @@ Yours faithfully,
 {ADDRESS}   = ${address || ''}
 {DATE}      = ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
 {JOBTITLE}  = ${jobTitle}
+{ENCLOSURE} = determine from the job requirements below — always include "Resume", then add others the job asks for such as "Certificates", "Academic Transcripts", "Teaching Certificate", "Reference Letter", etc. Format as a comma-separated list e.g. "Resume, Certificates, Academic Transcripts"
 
-=== JOB REQUIREMENTS (use these to write {BODY}) ===
+=== JOB REQUIREMENTS (use these to write {BODY} and determine {ENCLOSURE}) ===
 ${requirementsText}
 
 ${profileText}
