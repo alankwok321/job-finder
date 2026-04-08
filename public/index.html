@@ -943,6 +943,8 @@ async function loadJobDetail(job) {
       state.jobPrincipal = lookupData.principal || '';
       renderLookupInfo(lookupData);
     }
+    // Now generate cover letter with both lookup + parsed requirements available
+    await generateCoverLetter();
 
   } catch (err) {
     detailPanel.innerHTML = `
@@ -1061,7 +1063,7 @@ async function parseJobRequirements(jobData, detailPanel) {
     `;
 
     updateChecklistProgress();
-    await generateCoverLetter(parsed);
+    // Cover letter is generated later, after lookup also completes
 
   } catch (err) {
     const dynSections = document.getElementById('dynamicSections');
