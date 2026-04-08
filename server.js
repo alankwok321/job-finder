@@ -243,37 +243,55 @@ Applicant details:
       .map(r => `- ${r.category}：${r.item}`)
       .join('\n');
 
-    const letter = await ask(`You are a professional cover letter writer. Write a formal English cover letter based on the job requirements and applicant profile below.
+    // Extract just the title+surname for recipient line, e.g. "Mr Lam" from "Mr Lam Wai Keung, Principal"
+    const recipientLine = principal
+      ? principal.replace(/,.*$/, '').trim().split(' ').slice(0, 2).join('.')  // "Mr.Lam"
+      : '';
 
-Position: ${jobTitle}
-Company: ${company}
-${address ? `Company address: ${address}` : ''}
-${recipientText}
+    const letter = await ask(`You are a professional cover letter writer. Output the cover letter exactly following the format template below, substituting the placeholders. Do not add any extra sections or commentary.
 
-Job Requirements:
+=== FORMAT TEMPLATE ===
+{NAME}
+Tel: {PHONE}
+Email: {EMAIL}
+{RECIPIENT}
+{COMPANY}
+{ADDRESS}
+
+{DATE}
+
+Dear Principal,
+
+Application for the Post of {JOBTITLE}
+
+{BODY}
+
+Yours faithfully,
+{NAME}
+===
+
+=== SUBSTITUTION VALUES ===
+{NAME}      = ${profile?.name || '[Your Name]'}
+{PHONE}     = ${profile?.phone || '[Phone]'}
+{EMAIL}     = ${profile?.email || '[Email]'}
+{RECIPIENT} = ${recipientLine || ''}
+{COMPANY}   = ${company}
+{ADDRESS}   = ${address || ''}
+{DATE}      = ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+{JOBTITLE}  = ${jobTitle}
+
+=== JOB REQUIREMENTS (use these to write {BODY}) ===
 ${requirementsText}
-
-Responsibilities:
-${responsibilities.slice(0, 5).join('\n')}
 
 ${profileText}
 
-Write a professional English cover letter that includes:
-1. Applicant's name, phone, and email at the top — use the real values from the applicant details above; only use a placeholder like "[Phone]" if the value is missing
-2. Today's date
-3. The company name${address ? ` and address on a single line: "${address}"` : ''}
-4. Salutation using only the recipient's surname (e.g. "Dear Mr Tam," not the full name) — if no principal provided, use "Dear Hiring Manager,"
-5. Opening paragraph stating the position applied for
-6. Body paragraphs addressing how the applicant meets each key requirement
-7. Expression of genuine interest in the role and company
-8. Closing paragraph with call to action
-
-Requirements:
-- Written in formal English
-- Professional and confident tone
-- 300-400 words
-- Address must be written on a single line, not split across multiple lines
-- Output the cover letter text only, no extra commentary`);
+=== INSTRUCTIONS FOR {BODY} ===
+- 3 short paragraphs, 250-350 words total
+- Paragraph 1: express interest and state how you learned of the post
+- Paragraph 2: address how your qualifications and experience meet the key requirements above
+- Paragraph 3: express enthusiasm for the school/organisation and invite an interview
+- Formal English, confident tone
+- Do NOT include any headers, labels, or markdown — plain text only`);
 
     res.json({ letter: letter.trim() });
   } catch (err) {
