@@ -20,21 +20,41 @@ if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_a
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const gemini = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
-// Search-grounded model for looking up school info (needs search tool)
-const geminiSearch = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash-lite',
-  tools: [{ googleSearch: {} }]
-});
 
-async function ask(prompt) {
-  const result = await gemini.generateContent(prompt);
-  return result.response.text();
+// Model fallback chain — free tier first, then paid models
+// Override via GEMINI_MODELS in .env, e.g. gemini-2.5-pro,gemini-2.0-flash,gemini-2.5-flash-lite
+const MODEL_CHAIN = (process.env.GEMINI_MODELS || 'gemini-2.5-flash-lite,gemini-2.0-flash,gemini-2.5-flash,gemini-2.5-pro')
+  .split(',').map(m => m.trim()).filter(Boolean);
+
+console.log('Model fallback chain:', MODEL_CHAIN.join(' → '));
+
+function getModel(modelName, tools) {
+  return genAI.getGenerativeModel({ model: modelName, ...(tools ? { tools } : {}) });
+}
+
+// Try each model in order until one succeeds
+async function ask(prompt, tools) {
+  let lastErr;
+  for (const modelName of MODEL_CHAIN) {
+    try {
+      const model = getModel(modelName, tools);
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      if (MODEL_CHAIN.indexOf(modelName) > 0) {
+        console.log(`⚡ Fell back to ${modelName}`);
+      }
+      return text;
+    } catch (err) {
+      const reason = err.message?.match(/\[(\d{3}[^\]]*)\]/)?.[1] || err.message?.slice(0, 60);
+      console.warn(`⚠️  ${modelName} failed (${reason}) — trying next model…`);
+      lastErr = err;
+    }
+  }
+  throw lastErr;
 }
 
 async function askWithSearch(prompt) {
-  const result = await geminiSearch.generateContent(prompt);
-  return result.response.text();
+  return ask(prompt, [{ googleSearch: {} }]);
 }
 
 const HEADERS = {
