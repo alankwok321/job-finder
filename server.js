@@ -2,7 +2,13 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// Store uploaded files in memory (no disk I/O needed)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const app = express();
 app.use(express.json());
@@ -270,6 +276,57 @@ Requirements:
     res.json({ letter: letter.trim() });
   } catch (err) {
     console.error('Letter error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Parse resume (PDF or DOCX) and extract profile info
+app.post('/api/parse-resume', upload.single('resume'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const { mimetype, buffer, originalname } = req.file;
+    let text = '';
+
+    if (mimetype === 'application/pdf' || originalname.endsWith('.pdf')) {
+      const data = await pdfParse(buffer);
+      text = data.text;
+    } else if (
+      mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      originalname.endsWith('.docx')
+    ) {
+      const result = await mammoth.extractRawText({ buffer });
+      text = result.value;
+    } else {
+      return res.status(400).json({ error: 'Please upload a PDF or Word (.docx) file' });
+    }
+
+    if (!text.trim()) return res.status(400).json({ error: 'Could not extract text from the file' });
+
+    const response = await ask(`You are a resume parser. Extract the following information from this resume and return it as a JSON object.
+
+Resume text:
+${text.substring(0, 6000)}
+
+Return ONLY a JSON object with these exact fields:
+{
+  "name": "full name of the applicant",
+  "education": "highest qualification and institution, e.g. BSc Computer Science, HKU (2020)",
+  "experience": "summary of work experience in 2-3 sentences covering roles, years, and key responsibilities",
+  "skills": "comma-separated list of key skills, tools, languages",
+  "other": "any other relevant info such as languages spoken, certifications, availability, driving licence"
+}
+
+Rules:
+- If a field cannot be found, use an empty string
+- Keep each field concise but informative
+- Return only the JSON, no other text`);
+
+    const match = response.match(/\{[\s\S]*\}/);
+    const profile = match ? JSON.parse(match[0]) : {};
+    res.json(profile);
+  } catch (err) {
+    console.error('Resume parse error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

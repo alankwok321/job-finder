@@ -716,8 +716,16 @@
       <button class="modal-close" onclick="closeProfile()">✕</button>
     </div>
     <div class="modal-body">
+      <div id="resumeUploadArea" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px;cursor:pointer;transition:all 0.2s" onclick="document.getElementById('resumeFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleResumeDrop(event)">
+        <input type="file" id="resumeFileInput" accept=".pdf,.docx" style="display:none" onchange="uploadResume(this.files[0])">
+        <div id="resumeUploadContent">
+          <div style="font-size:2rem;margin-bottom:8px">📄</div>
+          <div style="font-weight:600;margin-bottom:4px">Upload Resume to Auto-fill</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)">Drag & drop or click · PDF or Word (.docx)</div>
+        </div>
+      </div>
       <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:16px">
-        填寫你的資料，系統將自動用於生成個人化求職信。資料只存於本機，不會上傳。
+        Or fill in manually. Data is stored locally only.
       </p>
       <div class="form-group">
         <label>姓名</label>
@@ -795,6 +803,45 @@ function saveProfile() {
 function updateProfileDot(isSet) {
   const dot = document.getElementById('profileDot');
   dot.className = 'profile-dot' + (isSet ? ' set' : '');
+}
+
+function handleResumeDrop(e) {
+  e.preventDefault();
+  document.getElementById('resumeUploadArea').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) uploadResume(file);
+}
+
+async function uploadResume(file) {
+  if (!file) return;
+  const area = document.getElementById('resumeUploadArea');
+  const content = document.getElementById('resumeUploadContent');
+
+  content.innerHTML = `<div class="loading" style="justify-content:center"><div class="spinner"></div>Reading resume with AI…</div>`;
+  area.style.borderColor = 'var(--primary)';
+
+  try {
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    const resp = await fetch('/api/parse-resume', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    // Fill in the form fields
+    if (data.name)       document.getElementById('p_name').value = data.name;
+    if (data.education)  document.getElementById('p_education').value = data.education;
+    if (data.experience) document.getElementById('p_experience').value = data.experience;
+    if (data.skills)     document.getElementById('p_skills').value = data.skills;
+    if (data.other)      document.getElementById('p_other').value = data.other;
+
+    content.innerHTML = `<div style="color:var(--success);font-weight:600">✅ ${escHtml(file.name)} — profile filled!</div><div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">Review and edit below before saving</div>`;
+    area.style.borderColor = 'var(--success)';
+  } catch (err) {
+    content.innerHTML = `<div style="color:#e74c3c;font-weight:600">⚠️ ${escHtml(err.message)}</div><div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">Click to try again</div>`;
+    area.style.borderColor = '#e74c3c';
+  }
 }
 
 function openProfile() {
