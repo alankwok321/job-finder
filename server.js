@@ -298,14 +298,20 @@ Applicant details:
       .map(r => `- ${r.category}：${r.item}`)
       .join('\n');
 
-    // Extract "Mr. Lai" style from "Mr Lai Wai Keung, Principal"
-    // Take first word (title) + dot + second word (surname) — strip any existing period from title first
-    const recipientLine = (() => {
-      if (!principal) return '';
+    // Build recipient block and salutation name from principal string
+    // Input e.g. "Mr. Lee Wai Ming, Principal"
+    // {RECIPIENT} → "The Principal"   {DEAR} → "Mr. Lee"
+    const { recipientRole, dearName } = (() => {
+      if (!principal) return { recipientRole: 'The Principal', dearName: 'Sir/Madam' };
+      const roleMatch = principal.match(/,\s*(.+)$/);
+      const role = roleMatch ? roleMatch[1].trim() : 'Principal';
       const words = principal.replace(/,.*$/, '').trim().split(/\s+/);
-      const title = words[0].replace(/\.$/, '');   // strip trailing dot e.g. "Mr." → "Mr"
+      const titleWord = words[0].replace(/\.$/, '');
       const surname = words[1] || '';
-      return surname ? `${title}. ${surname}` : title;  // "Mr. Lai"
+      return {
+        recipientRole: `The ${role}`,
+        dearName: surname ? `${titleWord}. ${surname}` : titleWord
+      };
     })();
 
     const letter = await ask(`You are a professional cover letter writer. Output the cover letter exactly following the format template below, substituting the placeholders. Do not add any extra sections or commentary.
@@ -321,7 +327,7 @@ Email: {EMAIL}
 
 {DATE}
 
-Dear Principal,
+Dear {DEAR},
 
 Application for the Post of {JOBTITLE}
 
@@ -338,10 +344,11 @@ NOTE: if any value below contains Chinese characters, translate it to English be
 {NAME}      = ${profile?.name || '[Your Name]'}
 {PHONE}     = ${profile?.phone || '[Phone]'}
 {EMAIL}     = ${profile?.email || '[Email]'}
-{RECIPIENT} = ${recipientLine || ''}
+{RECIPIENT} = ${recipientRole}
 {COMPANY}   = ${company}
 {ADDRESS}   = ${address || ''}
 {DATE}      = ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+{DEAR}      = ${dearName}
 {JOBTITLE}  = ${jobTitle}
 {ENCLOSURE} = list ONLY the documents explicitly requested or required by this specific job post. Do not add anything not mentioned in the requirements. Format as a comma-separated list e.g. "Resume, Certificates"
 
