@@ -349,26 +349,26 @@ app.post('/api/parse-resume', upload.single('resume'), async (req, res) => {
 
     if (!text.trim()) return res.status(400).json({ error: 'Could not extract text from the file' });
 
-    const response = await ask(`You are a resume parser. Extract the following information from this resume and return it as a JSON object.
+    const response = await ask(`You are an expert resume parser. Extract ALL information from this resume completely and accurately.
 
 Resume text:
-${text.substring(0, 6000)}
+${text.substring(0, 15000)}
 
-Return ONLY a JSON object with these exact fields:
+Return ONLY a valid JSON object with these exact fields. Extract every detail — do not summarise or skip anything:
 {
-  "name": "full name of the applicant",
-  "phone": "phone number exactly as written in the resume",
-  "email": "email address exactly as written in the resume",
-  "education": "highest qualification and institution, e.g. BSc Computer Science, HKU (2020)",
-  "experience": "summary of work experience in 2-3 sentences covering roles, years, and key responsibilities",
-  "skills": "comma-separated list of key skills, tools, languages",
-  "other": "any other relevant info such as languages spoken, certifications, availability, driving licence"
+  "name": "full name exactly as written",
+  "phone": "all phone numbers found, comma-separated if multiple",
+  "email": "all email addresses found, comma-separated if multiple",
+  "education": "ALL qualifications listed — include every degree, diploma, certificate, institution, major, year, and grade/GPA. List each on a new line.",
+  "experience": "FULL work history — for each role include: job title, company name, dates (from–to), location if shown, and ALL responsibilities/achievements listed. Separate each role with a blank line. Do not omit any role or bullet point.",
+  "skills": "ALL skills, tools, technologies, software, programming languages, frameworks, and competencies mentioned anywhere in the resume, comma-separated",
+  "other": "everything else not captured above: languages spoken with proficiency, professional memberships, licences, certifications, awards, publications, volunteer work, hobbies, references, availability, and any other sections"
 }
 
 Rules:
-- If a field cannot be found, use an empty string
-- Keep each field concise but informative
-- Return only the JSON, no other text`);
+- Extract verbatim where possible — do not paraphrase or shorten
+- If a field genuinely has no data, use an empty string
+- Return only the JSON object, no markdown fences or other text`);
 
     const match = response.match(/\{[\s\S]*\}/);
     const profile = match ? JSON.parse(match[0]) : {};
