@@ -243,10 +243,15 @@ Applicant details:
       .map(r => `- ${r.category}：${r.item}`)
       .join('\n');
 
-    // Extract just the title+surname for recipient line, e.g. "Mr Lam" from "Mr Lam Wai Keung, Principal"
-    const recipientLine = principal
-      ? principal.replace(/,.*$/, '').trim().split(' ').slice(0, 2).join('.')  // "Mr.Lam"
-      : '';
+    // Extract "Mr. Lai" style from "Mr Lai Wai Keung, Principal"
+    // Take first word (title) + dot + second word (surname) — strip any existing period from title first
+    const recipientLine = (() => {
+      if (!principal) return '';
+      const words = principal.replace(/,.*$/, '').trim().split(/\s+/);
+      const title = words[0].replace(/\.$/, '');   // strip trailing dot e.g. "Mr." → "Mr"
+      const surname = words[1] || '';
+      return surname ? `${title}. ${surname}` : title;  // "Mr. Lai"
+    })();
 
     const letter = await ask(`You are a professional cover letter writer. Output the cover letter exactly following the format template below, substituting the placeholders. Do not add any extra sections or commentary.
 
@@ -254,6 +259,7 @@ Applicant details:
 {NAME}
 Tel: {PHONE}
 Email: {EMAIL}
+
 {RECIPIENT}
 {COMPANY}
 {ADDRESS}

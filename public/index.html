@@ -428,20 +428,30 @@
   }
 
   #coverLetterText {
+    display: none; /* hidden — used only for copy/Gmail */
+  }
+
+  #coverLetterDisplay {
     width: 100%;
     min-height: 280px;
     border: 1.5px solid var(--border);
     border-radius: 8px;
-    padding: 14px;
+    padding: 18px 22px;
     font-size: 0.9rem;
     font-family: inherit;
-    line-height: 1.7;
-    resize: vertical;
-    outline: none;
-    transition: border-color 0.2s;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    background: #fafafa;
+    color: var(--text);
+    cursor: text;
   }
 
-  #coverLetterText:focus { border-color: var(--primary); }
+  #coverLetterDisplay .letter-subject {
+    display: block;
+    text-align: center;
+    font-weight: 700;
+    margin: 4px 0;
+  }
 
   .gmail-section {
     margin-top: 16px;
@@ -1106,7 +1116,8 @@ async function parseJobRequirements(jobData, detailPanel) {
         </div>
         <div class="card-body">
           <div class="loading" id="letterLoading"><div class="spinner"></div>AI 生成求職信中…</div>
-          <textarea id="coverLetterText" style="display:none"></textarea>
+          <div id="coverLetterDisplay" style="display:none"></div>
+          <textarea id="coverLetterText"></textarea>
           <div class="gmail-section" id="gmailSection" style="display:none">
             <div class="gmail-to-row">
               <label>收件人</label>
@@ -1294,13 +1305,15 @@ async function generateCoverLetter() {
     state.coverLetter = data.letter;
 
     const loadingEl = document.getElementById('letterLoading');
+    const displayEl = document.getElementById('coverLetterDisplay');
     const textEl = document.getElementById('coverLetterText');
     const gmailEl = document.getElementById('gmailSection');
 
     if (loadingEl) loadingEl.style.display = 'none';
-    if (textEl) {
-      textEl.style.display = 'block';
-      textEl.value = data.letter;
+    if (textEl) textEl.value = data.letter;
+    if (displayEl) {
+      displayEl.style.display = 'block';
+      displayEl.innerHTML = renderLetterHtml(data.letter);
     }
     if (gmailEl) {
       gmailEl.style.display = 'block';
@@ -1325,11 +1338,24 @@ async function regenerateLetter() {
   const textEl = document.getElementById('coverLetterText');
   const gmailEl = document.getElementById('gmailSection');
 
+  const displayEl2 = document.getElementById('coverLetterDisplay');
   if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.innerHTML = '<div class="spinner"></div>重新生成中…'; }
-  if (textEl) textEl.style.display = 'none';
+  if (displayEl2) displayEl2.style.display = 'none';
   if (gmailEl) gmailEl.style.display = 'none';
 
   await generateCoverLetter();
+}
+
+function renderLetterHtml(text) {
+  // Escape HTML then restore newlines, and center the "Application for the Post of" line
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return escaped.replace(
+    /(Application for the Post of .+)/g,
+    '<span class="letter-subject">$1</span>'
+  );
 }
 
 function copyLetter() {
