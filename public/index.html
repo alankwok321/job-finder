@@ -1002,8 +1002,8 @@ async function parseJobRequirements(jobData, detailPanel) {
     const parsed = await resp.json();
 
     if (parsed.error) {
-      const errMsg = parsed.error.includes('apiKey') || parsed.error.includes('auth')
-        ? 'Anthropic API Key 未設定。請在 .env 檔案中設定 ANTHROPIC_API_KEY'
+      const errMsg = parsed.error.includes('apiKey') || parsed.error.includes('API_KEY') || parsed.error.includes('auth')
+        ? 'Gemini API Key 未設定。請在 .env 檔案中設定 GEMINI_API_KEY（免費：aistudio.google.com/apikey）'
         : parsed.error;
       throw new Error(errMsg);
     }

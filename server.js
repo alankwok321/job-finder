@@ -2,18 +2,24 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 app.use(express.json());
 app.use(express.static(require('path').join(__dirname, 'public')));
 
-if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === 'your_api_key_here') {
-  console.error('\n❌ ERROR: ANTHROPIC_API_KEY not set in .env file');
-  console.error('   Edit .env and set your API key from https://console.anthropic.com\n');
+if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
+  console.error('\n❌ ERROR: GEMINI_API_KEY not set in .env file');
+  console.error('   Get a free key at https://aistudio.google.com/apikey\n');
 }
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const gemini = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+async function ask(prompt) {
+  const result = await gemini.generateContent(prompt);
+  return result.response.text();
+}
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -164,12 +170,7 @@ app.post('/api/parse', async (req, res) => {
         .join('\n\n');
     }
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: `你是一位求職顧問。以下是一則求職廣告的文字內容。請從中提取所有職位要求和資格條件，並以JSON格式回傳。
+    const text = await ask(`你是一位求職顧問。以下是一則求職廣告的文字內容。請從中提取所有職位要求和資格條件，並以JSON格式回傳。
 
 職位：${title}
 公司：${company}
@@ -182,21 +183,17 @@ ${jobText.substring(0, 4000)}
   "requirements": [
     {"category": "學歷", "item": "大學學位或以上"},
     {"category": "經驗", "item": "3年以上相關工作經驗"},
-    {"category": "技能", "item": "熟悉Microsoft Office"},
-    ...
+    {"category": "技能", "item": "熟悉Microsoft Office"}
   ],
-  "responsibilities": ["職責1", "職責2", ...],
+  "responsibilities": ["職責1", "職責2"],
   "contactEmail": "email@example.com 或 空字串",
   "salaryRange": "薪酬範圍 或 空字串",
   "location": "工作地點 或 空字串",
   "applyUrl": "申請連結 或 空字串"
 }
 
-只回傳JSON，不要其他文字。`
-      }]
-    });
+只回傳JSON，不要其他文字。`);
 
-    const text = message.content[0].text.trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { requirements: [], responsibilities: [] };
     res.json(parsed);
@@ -224,12 +221,7 @@ app.post('/api/generate-letter', async (req, res) => {
       .map(r => `- ${r.category}：${r.item}`)
       .join('\n');
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: `你是一位專業求職信撰寫顧問。請根據以下職位要求和求職者資料，撰寫一封專業的繁體中文求職信。
+    const letter = await ask(`你是一位專業求職信撰寫顧問。請根據以下職位要求和求職者資料，撰寫一封專業的繁體中文求職信。
 
 職位：${jobTitle}
 公司：${company}
@@ -253,11 +245,9 @@ ${profileText}
 - 使用繁體中文
 - 專業正式語氣
 - 長度適中（300-500字）
-- 直接輸出求職信內容，不需要其他說明`
-      }]
-    });
+- 直接輸出求職信內容，不需要其他說明`);
 
-    res.json({ letter: message.content[0].text.trim() });
+    res.json({ letter: letter.trim() });
   } catch (err) {
     console.error('Letter error:', err.message);
     res.status(500).json({ error: err.message });
