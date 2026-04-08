@@ -351,7 +351,7 @@ ${profileText}
 
 === INSTRUCTIONS FOR {BODY} ===
 - 3 short paragraphs, 250-350 words total
-- Paragraph 1: express interest and state how you learned of the post
+- Paragraph 1: express interest and state that the post was seen on JUMP (jump.mingpao.com)
 - Paragraph 2: address how your qualifications and experience meet the key requirements above
 - Paragraph 3: express enthusiasm for the school/organisation and invite an interview
 - Formal English, confident tone
