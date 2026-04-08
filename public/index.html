@@ -1295,7 +1295,7 @@ function renderLookupInfo(data) {
 function updateGmailRecipient() {
   const subjectEl = document.getElementById('gmailSubject');
   if (subjectEl && !subjectEl.dataset.edited) {
-    subjectEl.value = `Application for ${state.jobTitle}`;
+    subjectEl.value = `Application for the Post of ${state.jobTitle}`;
   }
 }
 
@@ -1327,6 +1327,10 @@ async function generateCoverLetter() {
 
     state.coverLetter = data.letter;
 
+    // Extract translated job title from the "Application for the Post of …" line
+    const titleMatch = data.letter.match(/Application for the Post of (.+)/i);
+    if (titleMatch) state.jobTitle = titleMatch[1].trim();
+
     const loadingEl = document.getElementById('letterLoading');
     const displayEl = document.getElementById('coverLetterDisplay');
     const textEl = document.getElementById('coverLetterText');
@@ -1340,9 +1344,9 @@ async function generateCoverLetter() {
     }
     if (gmailEl) {
       gmailEl.style.display = 'block';
-      // Set default subject
+      // Set default subject using the (now translated) job title
       const subjectEl = document.getElementById('gmailSubject');
-      if (subjectEl) subjectEl.value = `Application for ${state.jobTitle}`;
+      if (subjectEl) subjectEl.value = `Application for the Post of ${state.jobTitle}`;
       // Set email from job
       const toEl = document.getElementById('gmailTo');
       if (toEl && state.jobEmail) toEl.value = state.jobEmail;
@@ -1389,7 +1393,7 @@ function copyLetter() {
 
 function openGmail() {
   const to = document.getElementById('gmailTo')?.value?.trim() || '';
-  const subject = document.getElementById('gmailSubject')?.value?.trim() || `Application for ${state.jobTitle}`;
+  const subject = document.getElementById('gmailSubject')?.value?.trim() || `Application for the Post of ${state.jobTitle}`;
   const body = document.getElementById('coverLetterText')?.value || state.coverLetter;
 
   if (!body) {
