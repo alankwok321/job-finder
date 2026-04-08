@@ -1162,7 +1162,7 @@ async function generateCoverLetter() {
       gmailEl.style.display = 'block';
       // Set default subject
       const subjectEl = document.getElementById('gmailSubject');
-      if (subjectEl) subjectEl.value = `應徵 ${state.jobTitle} 一職`;
+      if (subjectEl) subjectEl.value = `Application for ${state.jobTitle}`;
       // Set email from job
       const toEl = document.getElementById('gmailTo');
       if (toEl && state.jobEmail) toEl.value = state.jobEmail;

@@ -221,31 +221,31 @@ app.post('/api/generate-letter', async (req, res) => {
       .map(r => `- ${r.category}：${r.item}`)
       .join('\n');
 
-    const letter = await ask(`你是一位專業求職信撰寫顧問。請根據以下職位要求和求職者資料，撰寫一封專業的繁體中文求職信。
+    const letter = await ask(`You are a professional cover letter writer. Write a formal English cover letter based on the job requirements and applicant profile below.
 
-職位：${jobTitle}
-公司：${company}
+Position: ${jobTitle}
+Company: ${company}
 
-職位要求：
+Job Requirements:
 ${requirementsText}
 
-職責：
+Responsibilities:
 ${responsibilities.slice(0, 5).join('\n')}
 
 ${profileText}
 
-請撰寫一封正式的繁體中文求職信，包括：
-1. 開頭問候語
-2. 自我介紹（如有求職者資料則個人化，否則用一般格式）
-3. 針對職位要求，說明自己如何符合各項條件
-4. 表達對職位和公司的興趣
-5. 結尾和聯絡方式
+Write a professional English cover letter that includes:
+1. Formal salutation
+2. Opening paragraph stating the position applied for
+3. Body paragraphs addressing how the applicant meets each key requirement
+4. Expression of genuine interest in the role and company
+5. Closing paragraph with call to action and contact details
 
-求職信格式要求：
-- 使用繁體中文
-- 專業正式語氣
-- 長度適中（300-500字）
-- 直接輸出求職信內容，不需要其他說明`);
+Requirements:
+- Written in formal English
+- Professional and confident tone
+- 300-400 words
+- Output the cover letter text only, no extra commentary`);
 
     res.json({ letter: letter.trim() });
   } catch (err) {
