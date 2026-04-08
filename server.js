@@ -227,6 +227,8 @@ app.post('/api/generate-letter', async (req, res) => {
     const profileText = profile ? `
 Applicant details:
 - Name: ${profile.name || ''}
+- Phone: ${profile.phone || ''}
+- Email: ${profile.email || ''}
 - Education: ${profile.education || ''}
 - Work experience: ${profile.experience || ''}
 - Skills: ${profile.skills || ''}
@@ -257,7 +259,7 @@ ${responsibilities.slice(0, 5).join('\n')}
 ${profileText}
 
 Write a professional English cover letter that includes:
-1. Applicant's name and contact details at the top (use placeholders if not provided)
+1. Applicant's name, phone, and email at the top — use the real values from the applicant details above; only use a placeholder like "[Phone]" if the value is missing
 2. Today's date
 3. The company name${address ? ` and address on a single line: "${address}"` : ''}
 4. Salutation using only the recipient's surname (e.g. "Dear Mr Tam," not the full name) — if no principal provided, use "Dear Hiring Manager,"
@@ -311,6 +313,8 @@ ${text.substring(0, 6000)}
 Return ONLY a JSON object with these exact fields:
 {
   "name": "full name of the applicant",
+  "phone": "phone number exactly as written in the resume",
+  "email": "email address exactly as written in the resume",
   "education": "highest qualification and institution, e.g. BSc Computer Science, HKU (2020)",
   "experience": "summary of work experience in 2-3 sentences covering roles, years, and key responsibilities",
   "skills": "comma-separated list of key skills, tools, languages",

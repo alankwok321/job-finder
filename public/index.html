@@ -729,7 +729,17 @@
       </p>
       <div class="form-group">
         <label>姓名</label>
-        <input id="p_name" type="text" placeholder="例：陳大文">
+        <input id="p_name" type="text" placeholder="例：Chan Tai Man">
+      </div>
+      <div style="display:flex;gap:12px">
+        <div class="form-group" style="flex:1">
+          <label>電話</label>
+          <input id="p_phone" type="tel" placeholder="例：+852 9123 4567">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>電郵</label>
+          <input id="p_email" type="email" placeholder="例：chan@email.com">
+        </div>
       </div>
       <div class="form-group">
         <label>學歷</label>
@@ -777,22 +787,26 @@ let state = {
 // Profile
 function loadProfile() {
   const p = JSON.parse(localStorage.getItem('jumpProfile') || '{}');
-  if (p.name) document.getElementById('p_name').value = p.name;
-  if (p.education) document.getElementById('p_education').value = p.education;
+  if (p.name)       document.getElementById('p_name').value = p.name;
+  if (p.phone)      document.getElementById('p_phone').value = p.phone;
+  if (p.email)      document.getElementById('p_email').value = p.email;
+  if (p.education)  document.getElementById('p_education').value = p.education;
   if (p.experience) document.getElementById('p_experience').value = p.experience;
-  if (p.skills) document.getElementById('p_skills').value = p.skills;
-  if (p.other) document.getElementById('p_other').value = p.other;
+  if (p.skills)     document.getElementById('p_skills').value = p.skills;
+  if (p.other)      document.getElementById('p_other').value = p.other;
   updateProfileDot(!!p.name);
   return p;
 }
 
 function saveProfile() {
   const p = {
-    name: document.getElementById('p_name').value.trim(),
-    education: document.getElementById('p_education').value.trim(),
+    name:       document.getElementById('p_name').value.trim(),
+    phone:      document.getElementById('p_phone').value.trim(),
+    email:      document.getElementById('p_email').value.trim(),
+    education:  document.getElementById('p_education').value.trim(),
     experience: document.getElementById('p_experience').value.trim(),
-    skills: document.getElementById('p_skills').value.trim(),
-    other: document.getElementById('p_other').value.trim()
+    skills:     document.getElementById('p_skills').value.trim(),
+    other:      document.getElementById('p_other').value.trim()
   };
   localStorage.setItem('jumpProfile', JSON.stringify(p));
   updateProfileDot(!!p.name);
@@ -831,6 +845,8 @@ async function uploadResume(file) {
 
     // Fill in the form fields
     if (data.name)       document.getElementById('p_name').value = data.name;
+    if (data.phone)      document.getElementById('p_phone').value = data.phone;
+    if (data.email)      document.getElementById('p_email').value = data.email;
     if (data.education)  document.getElementById('p_education').value = data.education;
     if (data.experience) document.getElementById('p_experience').value = data.experience;
     if (data.skills)     document.getElementById('p_skills').value = data.skills;
