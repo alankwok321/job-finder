@@ -925,13 +925,24 @@ async function loadJobDetail(job) {
     state.jobCompany = jobData.company || job.company;
     state.jobEmail = jobData.email || '';
     state.jobUrl = jobData.url;
+    state.jobAddress = '';
+    state.jobPrincipal = '';
 
     // Render job header
     detailPanel.innerHTML = renderJobHeader(jobData, job);
 
     // Parse requirements
     renderParsingSection(detailPanel);
-    await parseJobRequirements(jobData, detailPanel);
+    // Run lookup and parsing in parallel
+    const [_, lookupData] = await Promise.all([
+      parseJobRequirements(jobData, detailPanel),
+      lookupCompanyInfo(state.jobCompany)
+    ]);
+    if (lookupData) {
+      state.jobAddress = lookupData.address || '';
+      state.jobPrincipal = lookupData.principal || '';
+      renderLookupInfo(lookupData);
+    }
 
   } catch (err) {
     detailPanel.innerHTML = `
@@ -978,6 +989,10 @@ function renderParsingSection(detailPanel) {
   const dynSections = document.getElementById('dynamicSections');
   if (!dynSections) return;
   dynSections.innerHTML = `
+    <div class="card">
+      <div class="card-header"><h3>🔎 School / Organisation Info</h3><div class="loading" style="padding:0"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div></div></div>
+      <div id="lookupCard"><div class="card-body" style="color:var(--text-muted);font-size:0.88rem">Looking up address and principal name…</div></div>
+    </div>
     <div class="card">
       <div class="card-header"><h3>📋 職位要求分析</h3></div>
       <div class="card-body">
@@ -1127,6 +1142,68 @@ function updateChecklistProgress() {
   });
 }
 
+async function lookupCompanyInfo(company) {
+  try {
+    const resp = await fetch('/api/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company })
+    });
+    return await resp.json();
+  } catch { return null; }
+}
+
+function renderLookupInfo(data) {
+  // Hide spinner in lookup card header
+  const headerSpinner = document.querySelector('#lookupCard')?.closest('.card')?.querySelector('.card-header .loading');
+  if (headerSpinner) headerSpinner.style.display = 'none';
+  const card = document.getElementById('lookupCard');
+  if (!card) return;
+  const hasInfo = data.address || data.principal;
+  if (!hasInfo) {
+    card.innerHTML = `<div class="card-body" style="color:var(--text-muted);font-size:0.88rem">找不到相關資料，請手動填寫。</div>`;
+    return;
+  }
+  card.innerHTML = `
+    <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+      ${data.principal ? `
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.1rem">👤</span>
+          <div>
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Principal / Director</div>
+            <div style="font-size:0.95rem;font-weight:600">${escHtml(data.principal)}</div>
+          </div>
+          <button class="btn btn-copy" style="margin-left:auto;font-size:0.78rem" onclick="copyText('${escAttr(data.principal)}')">Copy</button>
+        </div>` : ''}
+      ${data.address ? `
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="font-size:1.1rem">📍</span>
+          <div>
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Address</div>
+            <div style="font-size:0.9rem;line-height:1.5">${escHtml(data.address)}</div>
+          </div>
+          <button class="btn btn-copy" style="margin-left:auto;font-size:0.78rem;flex-shrink:0" onclick="copyText('${escAttr(data.address)}')">Copy</button>
+        </div>` : ''}
+      <div style="font-size:0.75rem;color:var(--text-muted);padding-top:4px;border-top:1px solid var(--border)">
+        ⚠️ AI-generated — please verify before sending
+      </div>
+    </div>
+  `;
+  // Also update cover letter salutation fields if letter already generated
+  updateGmailRecipient();
+}
+
+function updateGmailRecipient() {
+  const subjectEl = document.getElementById('gmailSubject');
+  if (subjectEl && !subjectEl.dataset.edited) {
+    subjectEl.value = `Application for ${state.jobTitle}`;
+  }
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('✅ Copied to clipboard'));
+}
+
 async function generateCoverLetter() {
   const profile = JSON.parse(localStorage.getItem('jumpProfile') || '{}');
   const requirements = state.checklistData;
@@ -1140,7 +1217,9 @@ async function generateCoverLetter() {
         company: state.jobCompany,
         requirements,
         responsibilities: [],
-        profile
+        profile,
+        address: state.jobAddress || '',
+        principal: state.jobPrincipal || ''
       })
     });
     const data = await resp.json();

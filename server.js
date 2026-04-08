@@ -15,9 +15,19 @@ if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_a
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const gemini = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+// Search-grounded model for looking up school info (needs search tool)
+const geminiSearch = genAI.getGenerativeModel({
+  model: 'gemini-2.5-flash-lite',
+  tools: [{ googleSearch: {} }]
+});
 
 async function ask(prompt) {
   const result = await gemini.generateContent(prompt);
+  return result.response.text();
+}
+
+async function askWithSearch(prompt) {
+  const result = await geminiSearch.generateContent(prompt);
   return result.response.text();
 }
 
@@ -206,16 +216,20 @@ ${jobText.substring(0, 4000)}
 // Generate cover letter using Claude
 app.post('/api/generate-letter', async (req, res) => {
   try {
-    const { jobTitle, company, requirements, responsibilities, profile } = req.body;
+    const { jobTitle, company, requirements, responsibilities, profile, address, principal } = req.body;
 
     const profileText = profile ? `
-求職者資料：
-- 姓名：${profile.name || ''}
-- 學歷：${profile.education || ''}
-- 工作經驗：${profile.experience || ''}
-- 技能：${profile.skills || ''}
-- 其他：${profile.other || ''}
+Applicant details:
+- Name: ${profile.name || ''}
+- Education: ${profile.education || ''}
+- Work experience: ${profile.experience || ''}
+- Skills: ${profile.skills || ''}
+- Other: ${profile.other || ''}
 ` : '';
+
+    const recipientText = principal
+      ? `Recipient: ${principal}`
+      : `Recipient: Hiring Manager`;
 
     const requirementsText = requirements
       .map(r => `- ${r.category}：${r.item}`)
@@ -225,6 +239,8 @@ app.post('/api/generate-letter', async (req, res) => {
 
 Position: ${jobTitle}
 Company: ${company}
+${address ? `Company address: ${address}` : ''}
+${recipientText}
 
 Job Requirements:
 ${requirementsText}
@@ -235,11 +251,14 @@ ${responsibilities.slice(0, 5).join('\n')}
 ${profileText}
 
 Write a professional English cover letter that includes:
-1. Formal salutation
-2. Opening paragraph stating the position applied for
-3. Body paragraphs addressing how the applicant meets each key requirement
-4. Expression of genuine interest in the role and company
-5. Closing paragraph with call to action and contact details
+1. Applicant's name and contact details at the top (use placeholders if not provided)
+2. Today's date
+3. The company name${address ? ` and address (${address})` : ''}
+4. Salutation addressed to ${principal || 'the Hiring Manager'} by name if known
+5. Opening paragraph stating the position applied for
+6. Body paragraphs addressing how the applicant meets each key requirement
+7. Expression of genuine interest in the role and company
+8. Closing paragraph with call to action
 
 Requirements:
 - Written in formal English
@@ -251,6 +270,33 @@ Requirements:
   } catch (err) {
     console.error('Letter error:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Look up school/company address and principal/hiring manager name
+app.post('/api/lookup', async (req, res) => {
+  try {
+    const { company } = req.body;
+    if (!company) return res.json({ address: '', principal: '' });
+
+    const text = await askWithSearch(
+      `Search for the Hong Kong organisation named "${company}".
+Find and return ONLY a JSON object with these two fields:
+{
+  "address": "the full Hong Kong address in English",
+  "principal": "the name and title of the principal, headmaster, CEO, or director (whoever would receive a job application)"
+}
+If you cannot find reliable information for a field, use an empty string.
+Return only the JSON, no other text.`
+    );
+
+    const match = text.match(/\{[\s\S]*\}/);
+    const data = match ? JSON.parse(match[0]) : { address: '', principal: '' };
+    res.json(data);
+  } catch (err) {
+    console.error('Lookup error:', err.message);
+    // Non-fatal — return empty so the app keeps working
+    res.json({ address: '', principal: '' });
   }
 });
 
