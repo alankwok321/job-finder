@@ -147,10 +147,45 @@ app.get('/api/job/:id', async (req, res) => {
       if (key && val && val !== key) meta[key] = val;
     });
 
-    // Extract contact email
+    // Emails that belong to the portal itself, not the employer
+    const PORTAL_EMAILS = /^(jump@mingpao\.com|noreply|sentry|no-reply|example|webmaster|admin@mingpao)/i;
+
+    // Extract contact email — try multiple strategies in order of reliability
     let email = '';
-    $('a[href^="mailto:"]').each((i, el) => {
-      email = $(el).attr('href').replace('mailto:', '').trim();
+
+    // 1. mailto: links inside the Enquiries section (most specific)
+    $('h5').filter((i, el) => /Enquir|查詢/i.test($(el).text())).each((i, el) => {
+      $(el).nextUntil('h5').find('a[href^="mailto:"]').each((j, a) => {
+        const candidate = $(a).attr('href').replace('mailto:', '').split('?')[0].trim();
+        if (candidate.includes('@') && !PORTAL_EMAILS.test(candidate)) {
+          email = candidate; return false;
+        }
+      });
+    });
+
+    // 2. Any mailto: link on the page (excluding portal emails)
+    if (!email) {
+      $('a[href^="mailto:"]').each((i, el) => {
+        const candidate = $(el).attr('href').replace('mailto:', '').split('?')[0].trim();
+        if (candidate.includes('@') && !PORTAL_EMAILS.test(candidate)) {
+          email = candidate; return false;
+        }
+      });
+    }
+
+    // 3. Plain-text email inside the Enquiries section
+    if (!email) {
+      $('h5').filter((i, el) => /Enquir|查詢/i.test($(el).text())).each((i, el) => {
+        const text = $(el).nextUntil('h5').text();
+        const match = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+        if (match && !PORTAL_EMAILS.test(match[0])) { email = match[0]; return false; }
+      });
+    }
+
+    // Extract the full enquiries section text (may include postal address, WhatsApp, etc.)
+    let enquiries = '';
+    $('h5').filter((i, el) => /Enquir|查詢/i.test($(el).text())).each((i, el) => {
+      enquiries = $(el).nextUntil('h5').text().replace(/\s+/g, ' ').trim();
       return false;
     });
 
@@ -186,7 +221,7 @@ app.get('/api/job/:id', async (req, res) => {
     // Try to get structured HTML content
     const contentHtml = $('[class*="content"], [class*="detail"], [class*="desc"], main, article').first().html() || $('body').html();
 
-    res.json({ id, title, company, meta, email, sections, bodyText: bodyText.substring(0, 8000), url });
+    res.json({ id, title, company, meta, email, enquiries, sections, bodyText: bodyText.substring(0, 8000), url });
   } catch (err) {
     console.error('Job detail error:', err.message);
     res.status(500).json({ error: err.message });
@@ -222,7 +257,7 @@ ${jobText.substring(0, 4000)}
     {"category": "技能", "item": "熟悉Microsoft Office"}
   ],
   "responsibilities": ["職責1", "職責2"],
-  "contactEmail": "email@example.com 或 空字串",
+  "contactEmail": "the email address to send the application to — check Enquiries / 查詢 / Contact sections carefully. Return empty string only if truly none found.",
   "salaryRange": "薪酬範圍 或 空字串",
   "location": "工作地點 或 空字串",
   "applyUrl": "申請連結 或 空字串"

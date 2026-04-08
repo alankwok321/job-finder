@@ -1049,11 +1049,18 @@ function renderJobHeader(jobData, job) {
     metaChips += `<div class="meta-chip email" onclick="setEmail('${escAttr(email)}')">✉️ ${escHtml(email)}</div>`;
   }
 
+  const enquiriesHtml = jobData.enquiries && !email
+    ? `<div style="margin-top:10px;padding:10px 12px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;font-size:0.85rem;color:#6d4c00">
+        📬 <strong>Application method:</strong> ${escHtml(jobData.enquiries)}
+       </div>`
+    : '';
+
   return `
     <div class="job-header-card" id="jobHeader">
       <h2>${title}</h2>
       <div class="company-name">🏢 ${company}</div>
       ${metaChips ? `<div class="job-meta-grid">${metaChips}</div>` : ''}
+      ${enquiriesHtml}
       ${url ? `<a class="view-original-link" href="${escAttr(url)}" target="_blank">🔗 查看原始廣告</a>` : ''}
     </div>
     <div id="dynamicSections"></div>
@@ -1099,7 +1106,18 @@ async function parseJobRequirements(jobData, detailPanel) {
     }
 
     state.checklistData = parsed.requirements || [];
-    if (parsed.contactEmail && !state.jobEmail) state.jobEmail = parsed.contactEmail;
+    if (parsed.contactEmail && !state.jobEmail) {
+      state.jobEmail = parsed.contactEmail;
+      // Immediately update header chip too
+      const existingChips = document.querySelector('.job-meta-grid');
+      if (existingChips && !existingChips.querySelector('.meta-chip.email')) {
+        const chip = document.createElement('div');
+        chip.className = 'meta-chip email';
+        chip.innerHTML = `✉️ ${escHtml(parsed.contactEmail)}`;
+        chip.onclick = () => setEmail(parsed.contactEmail);
+        existingChips.appendChild(chip);
+      }
+    }
 
     const dynSections = document.getElementById('dynamicSections');
     if (!dynSections) return;
