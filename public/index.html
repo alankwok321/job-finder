@@ -1317,7 +1317,7 @@ function renderJobHeader(jobData, job) {
       <div class="company-name">🏢 ${company}</div>
       ${metaChips ? `<div class="job-meta-grid">${metaChips}</div>` : ''}
       ${enquiriesHtml}
-      ${url ? `<a class="view-original-link" href="${escAttr(url)}" target="_blank">🔗 查看原始廣告</a>` : ''}
+      <div id="headerWebsiteLink"></div>
     </div>
     <div id="schoolInfoSection"></div>
     <div id="dynamicSections"></div>
@@ -1524,6 +1524,16 @@ function renderLookupInfo(data) {
   const card = document.getElementById('lookupCard');
   if (!card) return;
 
+  // Inject school website (or fallback to jump ad link) into the job header
+  const headerLinkEl = document.getElementById('headerWebsiteLink');
+  if (headerLinkEl) {
+    if (data.website) {
+      headerLinkEl.innerHTML = `<a class="view-original-link" href="${escAttr(data.website)}" target="_blank">🌐 ${escHtml(data.website)}</a>`;
+    } else if (state.jobUrl) {
+      headerLinkEl.innerHTML = `<a class="view-original-link" href="${escAttr(state.jobUrl)}" target="_blank">🔗 查看原始廣告</a>`;
+    }
+  }
+
   const hasInfo = data.address || data.principal || data.banding || data.district || data.school_type;
   if (!hasInfo) {
     card.innerHTML = `<div class="card-body" style="color:var(--text-muted);font-size:0.88rem">找不到相關資料，請手動填寫。</div>`;
@@ -1532,6 +1542,15 @@ function renderLookupInfo(data) {
 
   const displayAddr = state.jobAddress || data.address;
   const addrSource = state.jobAddress ? '(from job ad)' : '(AI lookup)';
+
+  // Banding badge colour
+  const bandingColor = (() => {
+    const b = (data.banding || '').toLowerCase();
+    if (b.includes('band 1') || b.includes('dss') || b.includes('direct subsidy')) return '#1565c0';
+    if (b.includes('band 2')) return '#2e7d32';
+    if (b.includes('band 3')) return '#c62828';
+    return '#555';
+  })();
 
   function infoRow(icon, label, value, copyVal) {
     if (!value) return '';
@@ -1548,17 +1567,20 @@ function renderLookupInfo(data) {
 
   card.innerHTML = `
     <div class="card-body" style="padding:0 16px">
+      ${data.banding ? `
+        <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.3rem">🏅</span>
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:4px">Banding</div>
+            <span style="background:${bandingColor};color:white;font-weight:700;font-size:1rem;padding:3px 14px;border-radius:20px;letter-spacing:0.5px">${escHtml(data.banding)}</span>
+          </div>
+        </div>` : ''}
       ${infoRow('👤', 'Principal / Director', escHtml(data.principal), data.principal)}
       ${infoRow('📍', `Address ${addrSource}`, escHtml(displayAddr), displayAddr)}
       ${infoRow('🏫', 'School Type', escHtml(data.school_type), '')}
-      ${infoRow('🏅', 'Banding', escHtml(data.banding), '')}
       ${infoRow('📌', 'District', escHtml(data.district), '')}
       ${infoRow('📅', 'Year Founded', data.founded ? `Est. ${escHtml(data.founded)}` : '', '')}
-      ${data.website ? `
-        <div style="padding:10px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:3px">🌐 &nbsp;Website</div>
-          <a href="${escAttr(data.website)}" target="_blank" style="font-size:0.9rem;color:var(--blue);word-break:break-all">${escHtml(data.website)}</a>
-        </div>` : ''}
+      ${data.website ? infoRow('🌐', 'Website', `<a href="${escAttr(data.website)}" target="_blank" style="color:var(--blue);word-break:break-all">${escHtml(data.website)}</a>`, '') : ''}
       <div style="padding:10px 0;font-size:0.75rem;color:var(--text-muted)">
         ⚠️ AI-generated — please verify before sending
       </div>
