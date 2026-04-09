@@ -1319,18 +1319,31 @@ function renderJobHeader(jobData, job) {
       ${enquiriesHtml}
       ${url ? `<a class="view-original-link" href="${escAttr(url)}" target="_blank">🔗 查看原始廣告</a>` : ''}
     </div>
+    <div id="schoolInfoSection"></div>
     <div id="dynamicSections"></div>
   `;
 }
 
 function renderParsingSection(detailPanel) {
+  // School info lives in its own container so it is NEVER overwritten by requirements rendering
+  const schoolSection = document.getElementById('schoolInfoSection');
+  if (schoolSection) {
+    schoolSection.innerHTML = `
+      <div class="card" id="schoolInfoCard">
+        <div class="card-header">
+          <h3>🏫 School / Organisation Info</h3>
+          <div class="loading" style="padding:0" id="schoolSpinner"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div></div>
+        </div>
+        <div id="lookupCard">
+          <div class="card-body" style="color:var(--text-muted);font-size:0.88rem">Looking up school info…</div>
+        </div>
+      </div>
+    `;
+  }
+
   const dynSections = document.getElementById('dynamicSections');
   if (!dynSections) return;
   dynSections.innerHTML = `
-    <div class="card">
-      <div class="card-header"><h3>🔎 School / Organisation Info</h3><div class="loading" style="padding:0"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div></div></div>
-      <div id="lookupCard"><div class="card-body" style="color:var(--text-muted);font-size:0.88rem">Looking up address and principal name…</div></div>
-    </div>
     <div class="card">
       <div class="card-header"><h3>📋 職位要求分析</h3></div>
       <div class="card-body">
@@ -1506,7 +1519,7 @@ async function lookupCompanyInfo(company) {
 }
 
 function renderLookupInfo(data) {
-  const headerSpinner = document.querySelector('#lookupCard')?.closest('.card')?.querySelector('.card-header .loading');
+  const headerSpinner = document.getElementById('schoolSpinner');
   if (headerSpinner) headerSpinner.style.display = 'none';
   const card = document.getElementById('lookupCard');
   if (!card) return;
