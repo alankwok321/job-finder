@@ -83,6 +83,20 @@
 
   #profileBtn:hover { background: rgba(255,255,255,0.25); }
 
+  .model-badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.9);
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-family: monospace;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .profile-dot {
     width: 8px; height: 8px;
     border-radius: 50%;
@@ -764,10 +778,13 @@
     <h1><span class="logo">JUMP</span> 求職助手</h1>
     <div class="header-subtitle">自動分析職位要求 · 生成繁體中文求職信</div>
   </div>
-  <button id="profileBtn" onclick="openProfile()">
-    <div class="profile-dot" id="profileDot"></div>
-    我的求職檔案
-  </button>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="model-badge" id="modelBadge" title="AI model in use">⚙ loading…</div>
+    <button id="profileBtn" onclick="openProfile()">
+      <div class="profile-dot" id="profileDot"></div>
+      我的求職檔案
+    </button>
+  </div>
 </header>
 
 <div class="search-section">
@@ -1563,6 +1580,15 @@ async function generateCoverLetter() {
     const titleMatch = data.letter.match(/Application for the Post of (.+)/i);
     if (titleMatch) state.jobTitle = titleMatch[1].trim();
 
+    // Update model badge to show which model actually generated this letter
+    if (data.modelUsed) {
+      const badge = document.getElementById('modelBadge');
+      if (badge) {
+        badge.textContent = '⚙ ' + data.modelUsed;
+        badge.title = 'Last used model: ' + data.modelUsed;
+      }
+    }
+
     const loadingEl = document.getElementById('letterLoading');
     const displayEl = document.getElementById('coverLetterDisplay');
     const textEl = document.getElementById('coverLetterText');
@@ -1669,6 +1695,13 @@ document.getElementById('profileModal').addEventListener('click', e => {
 // Init
 loadProfile();
 updateTabBadges();
+fetch('/api/model').then(r => r.json()).then(data => {
+  const el = document.getElementById('modelBadge');
+  if (el) {
+    el.textContent = '⚙ ' + data.primary;
+    el.title = 'Model chain: ' + data.chain.join(' → ');
+  }
+}).catch(() => {});
 </script>
 </body>
 </html>

@@ -43,7 +43,7 @@ async function ask(prompt, tools) {
       if (MODEL_CHAIN.indexOf(modelName) > 0) {
         console.log(`⚡ Fell back to ${modelName}`);
       }
-      return text;
+      return { text, model: modelName };
     } catch (err) {
       const reason = err.message?.match(/\[(\d{3}[^\]]*)\]/)?.[1] || err.message?.slice(0, 60);
       console.warn(`⚠️  ${modelName} failed (${reason}) — trying next model…`);
@@ -62,6 +62,11 @@ const HEADERS = {
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
 };
+
+// Current model info
+app.get('/api/model', (req, res) => {
+  res.json({ primary: MODEL_CHAIN[0], chain: MODEL_CHAIN });
+});
 
 // Search jobs
 app.get('/api/search', async (req, res) => {
@@ -241,7 +246,7 @@ app.post('/api/parse', async (req, res) => {
         .join('\n\n');
     }
 
-    const text = await ask(`你是一位求職顧問。以下是一則求職廣告的文字內容。請從中提取所有職位要求和資格條件，並以JSON格式回傳。
+    const { text } = await ask(`你是一位求職顧問。以下是一則求職廣告的文字內容。請從中提取所有職位要求和資格條件，並以JSON格式回傳。
 
 職位：${title}
 公司：${company}
@@ -314,7 +319,7 @@ Applicant details:
       };
     })();
 
-    const letter = await ask(`You are a professional cover letter writer. Output the cover letter exactly following the format template below, substituting the placeholders. Do not add any extra sections or commentary.
+    const { text: letterText, model: modelUsed } = await ask(`You are a professional cover letter writer. Output the cover letter exactly following the format template below, substituting the placeholders. Do not add any extra sections or commentary.
 
 === FORMAT TEMPLATE ===
 {NAME}
@@ -367,7 +372,7 @@ ${profileText}
 - IMPORTANT: translate ALL Chinese characters to English throughout the entire letter — this includes the job title, school name, company name, address, subject names, qualifications, and any other text. No Chinese characters should appear anywhere in the output.
 - Do NOT include any headers, labels, or markdown — plain text only`);
 
-    res.json({ letter: letter.trim() });
+    res.json({ letter: letterText.trim(), modelUsed });
   } catch (err) {
     console.error('Letter error:', err.message);
     res.status(500).json({ error: err.message });
@@ -397,7 +402,7 @@ app.post('/api/parse-resume', upload.single('resume'), async (req, res) => {
 
     if (!text.trim()) return res.status(400).json({ error: 'Could not extract text from the file' });
 
-    const response = await ask(`You are an expert resume parser. Extract ALL information from this resume completely and accurately.
+    const { text: response } = await ask(`You are an expert resume parser. Extract ALL information from this resume completely and accurately.
 
 Resume text:
 ${text.substring(0, 15000)}
@@ -420,6 +425,7 @@ Rules:
 
     const match = response.match(/\{[\s\S]*\}/);
     const profile = match ? JSON.parse(match[0]) : {};
+
     res.json(profile);
   } catch (err) {
     console.error('Resume parse error:', err.message);
@@ -433,7 +439,7 @@ app.post('/api/lookup', async (req, res) => {
     const { company } = req.body;
     if (!company) return res.json({ address: '', principal: '' });
 
-    const text = await askWithSearch(
+    const { text } = await askWithSearch(
       `Search for the Hong Kong organisation named "${company}".
 Find and return ONLY a JSON object with these two fields:
 {
