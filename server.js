@@ -263,6 +263,7 @@ ${jobText.substring(0, 4000)}
   ],
   "responsibilities": ["職責1", "職責2"],
   "contactEmail": "the email address to send the application to — check Enquiries / 查詢 / Contact sections carefully. Return empty string only if truly none found.",
+  "schoolAddress": "the full postal address of the school or organisation as stated in the ad (check Enquiries / 查詢 section). Return empty string if not found.",
   "salaryRange": "薪酬範圍 或 空字串",
   "location": "工作地點 或 空字串",
   "applyUrl": "申請連結 或 空字串"
@@ -440,11 +441,16 @@ app.post('/api/lookup', async (req, res) => {
     if (!company) return res.json({ address: '', principal: '' });
 
     const { text } = await askWithSearch(
-      `Search for the Hong Kong organisation named "${company}".
-Find and return ONLY a JSON object with these two fields:
+      `Search for the Hong Kong school or organisation named "${company}".
+Find and return ONLY a JSON object with these fields:
 {
-  "address": "the full Hong Kong address in English",
-  "principal": "the name and title of the principal, headmaster, CEO, or director (whoever would receive a job application)"
+  "address": "the full Hong Kong postal address in English (street number, street, district)",
+  "principal": "the name and title of the principal, headmaster, CEO, or director (whoever would receive a job application) — e.g. Mr. Chan Tai Man, Principal",
+  "banding": "for schools: the DSS/Band 1/Band 2/Band 3 banding — e.g. Band 1, DSS, Direct Subsidy Scheme. Empty string if not a school or unknown.",
+  "district": "the Hong Kong district the school/org is in — e.g. Kwun Tong, Sha Tin. Empty string if unknown.",
+  "school_type": "for schools: the type — e.g. Primary School, Secondary School, International School, Kindergarten. Empty string if not a school.",
+  "founded": "year founded if known, else empty string",
+  "website": "official website URL if known, else empty string"
 }
 If you cannot find reliable information for a field, use an empty string.
 Return only the JSON, no other text.`

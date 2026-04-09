@@ -1266,7 +1266,9 @@ async function loadJobDetail(job) {
       lookupCompanyInfo(state.jobCompany)
     ]);
     if (lookupData) {
-      state.jobAddress = lookupData.address || '';
+      // Prefer the address extracted directly from the job posting (set by parseJobRequirements)
+      // Fall back to the Google Search lookup address
+      if (!state.jobAddress) state.jobAddress = lookupData.address || '';
       state.jobPrincipal = lookupData.principal || '';
       renderLookupInfo(lookupData);
     }
@@ -1360,6 +1362,8 @@ async function parseJobRequirements(jobData, detailPanel) {
     }
 
     state.checklistData = parsed.requirements || [];
+    // Use address from the job posting itself (most accurate)
+    if (parsed.schoolAddress) state.jobAddress = parsed.schoolAddress;
     if (parsed.contactEmail && !state.jobEmail) {
       state.jobEmail = parsed.contactEmail;
       // Immediately update header chip too
@@ -1502,18 +1506,34 @@ async function lookupCompanyInfo(company) {
 }
 
 function renderLookupInfo(data) {
-  // Hide spinner in lookup card header
   const headerSpinner = document.querySelector('#lookupCard')?.closest('.card')?.querySelector('.card-header .loading');
   if (headerSpinner) headerSpinner.style.display = 'none';
   const card = document.getElementById('lookupCard');
   if (!card) return;
-  const hasInfo = data.address || data.principal;
+
+  const hasInfo = data.address || data.principal || data.banding || data.district || data.school_type;
   if (!hasInfo) {
     card.innerHTML = `<div class="card-body" style="color:var(--text-muted);font-size:0.88rem">找不到相關資料，請手動填寫。</div>`;
     return;
   }
+
+  // Build info chips for banding / district / type / founded
+  const chips = [
+    data.school_type  ? `<span class="meta-chip">🏫 ${escHtml(data.school_type)}</span>` : '',
+    data.banding      ? `<span class="meta-chip">🏅 ${escHtml(data.banding)}</span>` : '',
+    data.district     ? `<span class="meta-chip">📌 ${escHtml(data.district)}</span>` : '',
+    data.founded      ? `<span class="meta-chip">📅 Est. ${escHtml(data.founded)}</span>` : '',
+  ].filter(Boolean).join('');
+
+  // Address shown in card — note if job posting had a more specific address
+  const addrLabel = state.jobAddress && state.jobAddress !== data.address
+    ? 'Address (from job ad)'
+    : 'Address (AI lookup)';
+  const displayAddr = state.jobAddress || data.address;
+
   card.innerHTML = `
     <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+      ${chips ? `<div class="job-meta-grid" style="margin:0">${chips}</div>` : ''}
       ${data.principal ? `
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:1.1rem">👤</span>
@@ -1523,21 +1543,24 @@ function renderLookupInfo(data) {
           </div>
           <button class="btn btn-copy" style="margin-left:auto;font-size:0.78rem" onclick="copyText('${escAttr(data.principal)}')">Copy</button>
         </div>` : ''}
-      ${data.address ? `
+      ${displayAddr ? `
         <div style="display:flex;align-items:flex-start;gap:10px">
           <span style="font-size:1.1rem">📍</span>
           <div>
-            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Address</div>
-            <div style="font-size:0.9rem;line-height:1.5">${escHtml(data.address)}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${addrLabel}</div>
+            <div style="font-size:0.9rem;line-height:1.5">${escHtml(displayAddr)}</div>
           </div>
-          <button class="btn btn-copy" style="margin-left:auto;font-size:0.78rem;flex-shrink:0" onclick="copyText('${escAttr(data.address)}')">Copy</button>
+          <button class="btn btn-copy" style="margin-left:auto;font-size:0.78rem;flex-shrink:0" onclick="copyText('${escAttr(displayAddr)}')">Copy</button>
+        </div>` : ''}
+      ${data.website ? `
+        <div style="font-size:0.82rem;color:var(--blue)">
+          🌐 <a href="${escAttr(data.website)}" target="_blank" style="color:var(--blue)">${escHtml(data.website)}</a>
         </div>` : ''}
       <div style="font-size:0.75rem;color:var(--text-muted);padding-top:4px;border-top:1px solid var(--border)">
         ⚠️ AI-generated — please verify before sending
       </div>
     </div>
   `;
-  // Also update cover letter salutation fields if letter already generated
   updateGmailRecipient();
 }
 
