@@ -1517,46 +1517,36 @@ function renderLookupInfo(data) {
     return;
   }
 
-  // Build info chips for banding / district / type / founded
-  const chips = [
-    data.school_type  ? `<span class="meta-chip">🏫 ${escHtml(data.school_type)}</span>` : '',
-    data.banding      ? `<span class="meta-chip">🏅 ${escHtml(data.banding)}</span>` : '',
-    data.district     ? `<span class="meta-chip">📌 ${escHtml(data.district)}</span>` : '',
-    data.founded      ? `<span class="meta-chip">📅 Est. ${escHtml(data.founded)}</span>` : '',
-  ].filter(Boolean).join('');
-
-  // Address shown in card — note if job posting had a more specific address
-  const addrLabel = state.jobAddress && state.jobAddress !== data.address
-    ? 'Address (from job ad)'
-    : 'Address (AI lookup)';
   const displayAddr = state.jobAddress || data.address;
+  const addrSource = state.jobAddress ? '(from job ad)' : '(AI lookup)';
+
+  function infoRow(icon, label, value, copyVal) {
+    if (!value) return '';
+    return `
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:1.3rem;line-height:1;flex-shrink:0;margin-top:2px">${icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:3px">${label}</div>
+          <div style="font-size:0.95rem;font-weight:600;color:var(--text);line-height:1.4;word-break:break-word">${value}</div>
+        </div>
+        ${copyVal ? `<button class="btn btn-copy" style="font-size:0.75rem;padding:4px 10px;flex-shrink:0;align-self:center" onclick="copyText('${escAttr(copyVal)}')">Copy</button>` : ''}
+      </div>`;
+  }
 
   card.innerHTML = `
-    <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
-      ${chips ? `<div class="job-meta-grid" style="margin:0">${chips}</div>` : ''}
-      ${data.principal ? `
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:1.1rem">👤</span>
-          <div>
-            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Principal / Director</div>
-            <div style="font-size:0.95rem;font-weight:600">${escHtml(data.principal)}</div>
-          </div>
-          <button class="btn btn-copy" style="margin-left:auto;font-size:0.78rem" onclick="copyText('${escAttr(data.principal)}')">Copy</button>
-        </div>` : ''}
-      ${displayAddr ? `
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          <span style="font-size:1.1rem">📍</span>
-          <div>
-            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${addrLabel}</div>
-            <div style="font-size:0.9rem;line-height:1.5">${escHtml(displayAddr)}</div>
-          </div>
-          <button class="btn btn-copy" style="margin-left:auto;font-size:0.78rem;flex-shrink:0" onclick="copyText('${escAttr(displayAddr)}')">Copy</button>
-        </div>` : ''}
+    <div class="card-body" style="padding:0 16px">
+      ${infoRow('👤', 'Principal / Director', escHtml(data.principal), data.principal)}
+      ${infoRow('📍', `Address ${addrSource}`, escHtml(displayAddr), displayAddr)}
+      ${infoRow('🏫', 'School Type', escHtml(data.school_type), '')}
+      ${infoRow('🏅', 'Banding', escHtml(data.banding), '')}
+      ${infoRow('📌', 'District', escHtml(data.district), '')}
+      ${infoRow('📅', 'Year Founded', data.founded ? `Est. ${escHtml(data.founded)}` : '', '')}
       ${data.website ? `
-        <div style="font-size:0.82rem;color:var(--blue)">
-          🌐 <a href="${escAttr(data.website)}" target="_blank" style="color:var(--blue)">${escHtml(data.website)}</a>
+        <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:3px">🌐 &nbsp;Website</div>
+          <a href="${escAttr(data.website)}" target="_blank" style="font-size:0.9rem;color:var(--blue);word-break:break-all">${escHtml(data.website)}</a>
         </div>` : ''}
-      <div style="font-size:0.75rem;color:var(--text-muted);padding-top:4px;border-top:1px solid var(--border)">
+      <div style="padding:10px 0;font-size:0.75rem;color:var(--text-muted)">
         ⚠️ AI-generated — please verify before sending
       </div>
     </div>
