@@ -358,11 +358,12 @@ ${requirementsText}
 ${profileText}
 
 === INSTRUCTIONS FOR {BODY} ===
-- 3 focused paragraphs, 220-320 words total
+- 3 focused paragraphs, 200-280 words total
 - Paragraph 1: one sentence — state interest in the post as seen on JUMP
-- Paragraph 2 (the main paragraph): go through the job's specific criteria one by one and directly match them to the applicant's actual qualifications, experience, and skills from the profile above. Only cite facts that appear in the applicant's profile — do not invent or assume anything. If a criterion has no matching info in the profile, skip it.
+- Paragraph 2 (the main paragraph): start from the job's criteria — for each criterion, check if the applicant's profile has a direct, specific match, and if so state it concisely. Do NOT narrate the full resume; only mention facts that directly address a listed criterion. Skip criteria with no match. Skip profile details that no criterion asks for.
 - Paragraph 3: one or two sentences — express enthusiasm and invite an interview
 - Formal English, confident tone
+- Do NOT list unrelated qualifications, experiences, or skills just because they appear in the profile
 - IMPORTANT: translate ALL Chinese characters to English throughout the entire letter — this includes the job title, school name, company name, address, subject names, qualifications, and any other text. No Chinese characters should appear anywhere in the output.
 - Do NOT include any headers, labels, or markdown — plain text only`);
 
