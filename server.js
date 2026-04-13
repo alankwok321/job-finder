@@ -466,5 +466,11 @@ Return only the JSON, no other text.`
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Job Finder running at http://localhost:${PORT}`));
+// Local dev: start the server. Vercel imports this file as a module and uses
+// the exported `app` directly — it does not call listen().
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Job Finder running at http://localhost:${PORT}`));
+}
+
+module.exports = app;
