@@ -1317,7 +1317,10 @@ function renderJobHeader(jobData, job) {
       <div class="company-name">🏢 ${company}</div>
       ${metaChips ? `<div class="job-meta-grid">${metaChips}</div>` : ''}
       ${enquiriesHtml}
-      <div id="headerWebsiteLink"></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">
+        ${url ? `<a class="view-original-link" href="${escAttr(url)}" target="_blank">🔗 查看原始廣告</a>` : ''}
+        <div id="headerWebsiteLink"></div>
+      </div>
     </div>
     <div id="schoolInfoSection"></div>
     <div id="dynamicSections"></div>
