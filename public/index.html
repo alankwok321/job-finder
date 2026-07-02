@@ -83,19 +83,36 @@
 
   #profileBtn:hover { background: rgba(255,255,255,0.25); }
 
-  .model-badge {
+  .model-select {
     background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.3);
-    color: rgba(255,255,255,0.9);
-    font-size: 0.72rem;
-    padding: 3px 8px;
-    border-radius: 10px;
-    font-family: monospace;
-    white-space: nowrap;
-    max-width: 180px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    border: 1.5px solid rgba(255,255,255,0.5);
+    color: white;
+    border-radius: 20px;
+    padding: 8px 34px 8px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1.2;
+    max-width: 300px;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 12px) 50%;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
   }
+  .model-select:hover { background-color: rgba(255,255,255,0.25); }
+  .model-select:focus { box-shadow: 0 0 0 2px rgba(255,255,255,0.18); }
+  .model-select.ready { border-color: rgba(46,204,113,0.85); color: #eafff2; }
+  .model-select.busy { border-color: rgba(243,156,18,0.9); color: #fff4dc; }
+  .model-select.error { border-color: rgba(231,76,60,0.95); color: #ffe8e5; }
+  .model-select option { color: var(--text); }
 
   .profile-dot {
     width: 8px; height: 8px;
@@ -779,7 +796,9 @@
     <div class="header-subtitle">自動分析職位要求 · 生成繁體中文求職信</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <div class="model-badge" id="modelBadge" title="AI model in use">⚙ loading…</div>
+    <select class="model-select" id="modelSelect" title="選擇 AI 模型" onchange="setAiModel(this.value)">
+      <option value="">載入模型中…</option>
+    </select>
     <button id="profileBtn" onclick="openProfile()">
       <div class="profile-dot" id="profileDot"></div>
       我的求職檔案
@@ -852,12 +871,12 @@
         <input type="file" id="resumeFileInput" accept=".pdf,.docx" style="display:none" onchange="uploadResume(this.files[0])">
         <div id="resumeUploadContent">
           <div style="font-size:2rem;margin-bottom:8px">📄</div>
-          <div style="font-weight:600;margin-bottom:4px">Upload Resume to Auto-fill</div>
-          <div style="font-size:0.82rem;color:var(--text-muted)">Drag & drop or click · PDF or Word (.docx)</div>
+          <div style="font-weight:600;margin-bottom:4px">上載履歷自動填寫</div>
+          <div style="font-size:0.82rem;color:var(--text-muted)">拖放或點擊上載 · 支援 PDF 或 Word (.docx)</div>
         </div>
       </div>
       <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:16px">
-        Or fill in manually. Data is stored locally only.
+        也可以手動填寫。資料只會儲存在本機瀏覽器。
       </p>
       <div class="form-group">
         <label>姓名</label>
@@ -914,10 +933,101 @@ let state = {
   jobTitle: '',
   jobCompany: '',
   jobUrl: '',
+  jobAddress: '',
+  jobPostingAddress: '',
+  jobAddressSource: '',
+  jobPrincipal: '',
   resumeFile: null,      // File object from upload
   resumeName: '',        // original filename
-  activeTab: 'search'
+  coverLetterLanguage: localStorage.getItem('jumpCoverLetterLanguage') || 'zh',
+  aiModel: localStorage.getItem('jumpAiModel') || '',
+  activeTab: 'search',
+  activeDetailRequestId: 0,
+  detailAbortController: null
 };
+
+function isCurrentDetailRequest(requestId) {
+  return requestId === state.activeDetailRequestId;
+}
+
+function getCoverLetterSubject() {
+  return state.coverLetterLanguage === 'en'
+    ? `Application for the Post of ${state.jobTitle}`
+    : `應徵「${state.jobTitle}」一職`;
+}
+
+function setCoverLetterLanguage(lang) {
+  state.coverLetterLanguage = lang === 'en' ? 'en' : 'zh';
+  localStorage.setItem('jumpCoverLetterLanguage', state.coverLetterLanguage);
+  updateGmailRecipient();
+}
+
+function setAiModel(model) {
+  state.aiModel = model;
+  localStorage.setItem('jumpAiModel', model);
+  setAiStatus('ready', model || '自動選擇', model ? `已選擇模型：${model}` : '會按模型順序自動選擇');
+}
+
+function getAiStatusLabel(status, message) {
+  if (status === 'busy') return `⚙ ${message || '處理中…'}`;
+  if (status === 'error') return `⚠ ${message || '發生錯誤'}`;
+  return `✓ ${message || '已就緒'}`;
+}
+
+function populateModelSelect(models, status = 'ready', message = state.aiModel || models[0] || '自動選擇') {
+  const select = document.getElementById('modelSelect');
+  if (!select) return;
+  if (!state.aiModel || !models.includes(state.aiModel)) {
+    state.aiModel = models[0] || '';
+    if (state.aiModel) localStorage.setItem('jumpAiModel', state.aiModel);
+  }
+  select.innerHTML = [
+    `<option value="${escAttr(state.aiModel)}">${escHtml(getAiStatusLabel(status, message || state.aiModel))}</option>`,
+    ...models
+      .filter(model => model !== state.aiModel)
+      .map(model => `<option value="${escAttr(model)}">${escHtml(model)}</option>`)
+  ].join('');
+  select.value = state.aiModel;
+}
+
+function setAiStatus(status, modelOrMessage, detail) {
+  const select = document.getElementById('modelSelect');
+  if (!select) return;
+  const models = state.aiModels || (state.aiModel ? [state.aiModel] : []);
+  const message = modelOrMessage || state.aiModel || '自動選擇';
+
+  if (status === 'busy') {
+    populateModelSelect(models, 'busy', message);
+    select.title = detail || 'AI 正在處理請求';
+  } else if (status === 'error') {
+    populateModelSelect(models, 'error', message);
+    select.title = detail || modelOrMessage || 'AI 發生錯誤';
+  } else {
+    if (models.includes(modelOrMessage)) state.aiModel = modelOrMessage;
+    populateModelSelect(models, 'ready', state.aiModel || message);
+    select.title = detail || 'AI 已就緒';
+  }
+  select.classList.remove('ready', 'busy', 'error');
+  select.classList.add(status);
+}
+
+async function refreshAiStatus() {
+  setAiStatus('busy', '檢查中');
+  try {
+    const resp = await fetch('/api/model');
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || '無法檢查 AI 狀態');
+    if (!data.configured) {
+      setAiStatus('error', '缺少 Gemini 金鑰', '請在 .env.local 或 .env 設定 GEMINI_API_KEY');
+      return;
+    }
+    state.aiModels = data.chain || [];
+    populateModelSelect(state.aiModels);
+    setAiStatus('ready', state.aiModel || data.primary, '模型順序：' + data.chain.join(' → '));
+  } catch (err) {
+    setAiStatus('error', 'AI 未連線', err.message);
+  }
+}
 
 // ── Starred / Bookmarks ──────────────────────────────────────────────────
 function getStarred() { return JSON.parse(localStorage.getItem('jumpStarred') || '[]'); }
@@ -943,7 +1053,7 @@ function toggleStar(adId, e) {
   // Update star button appearance in both search and starred lists
   document.querySelectorAll(`#card-${adId} .star-btn, #scard-${adId} .star-btn`).forEach(btn => {
     btn.classList.toggle('starred', isStarred(adId));
-    btn.title = isStarred(adId) ? 'Remove bookmark' : 'Bookmark';
+    btn.title = isStarred(adId) ? '移除書籤' : '加入書籤';
   });
   // Re-render starred list if visible
   if (state.activeTab === 'starred') renderStarredList();
@@ -963,7 +1073,7 @@ function renderStarredList() {
         <div class="job-card-company">${escHtml(job.company || '—')}</div>
         <div class="job-card-date">${escHtml(job.date || '')}</div>
       </div>
-      <button class="star-btn starred" title="Remove bookmark" onclick="toggleStar('${escAttr(job.adId)}', event)">★</button>
+      <button class="star-btn starred" title="移除書籤" onclick="toggleStar('${escAttr(job.adId)}', event)">★</button>
     </div>
   `).join('');
 }
@@ -1091,17 +1201,23 @@ async function uploadResume(file) {
   const area = document.getElementById('resumeUploadArea');
   const content = document.getElementById('resumeUploadContent');
 
-  content.innerHTML = `<div class="loading" style="justify-content:center"><div class="spinner"></div>Reading resume with AI…</div>`;
+  content.innerHTML = `<div class="loading" style="justify-content:center"><div class="spinner"></div>AI 正在讀取履歷…</div>`;
   area.style.borderColor = 'var(--primary)';
 
   try {
+    setAiStatus('busy', '讀取履歷中');
     const formData = new FormData();
     formData.append('resume', file);
+    formData.append('model', state.aiModel);
 
     const resp = await fetch('/api/parse-resume', { method: 'POST', body: formData });
     const data = await resp.json();
 
-    if (data.error) throw new Error(data.error);
+    if (data.error) {
+      setAiStatus('error', '履歷分析失敗', data.error);
+      throw new Error(data.error);
+    }
+    if (data.modelUsed) setAiStatus('ready', data.modelUsed, '最近用於履歷分析');
 
     // Fill in the form fields
     if (data.name)       document.getElementById('p_name').value = data.name;
@@ -1112,10 +1228,11 @@ async function uploadResume(file) {
     if (data.skills)     document.getElementById('p_skills').value = data.skills;
     if (data.other)      document.getElementById('p_other').value = data.other;
 
-    content.innerHTML = `<div style="color:var(--success);font-weight:600">✅ ${escHtml(file.name)} — profile filled!</div><div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">Review and edit below before saving</div>`;
+    content.innerHTML = `<div style="color:var(--success);font-weight:600">✅ ${escHtml(file.name)} — 已自動填寫檔案</div><div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">儲存前請先檢查並按需要修改</div>`;
     area.style.borderColor = 'var(--success)';
   } catch (err) {
-    content.innerHTML = `<div style="color:#e74c3c;font-weight:600">⚠️ ${escHtml(err.message)}</div><div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">Click to try again</div>`;
+    setAiStatus('error', '履歷分析失敗', err.message);
+    content.innerHTML = `<div style="color:#e74c3c;font-weight:600">⚠️ ${escHtml(err.message)}</div><div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">點擊可重新嘗試</div>`;
     area.style.borderColor = '#e74c3c';
   }
 }
@@ -1130,6 +1247,23 @@ function closeProfile() {
 }
 
 // Search
+function getSearchErrorMessage(err) {
+  if (location.protocol === 'file:') {
+    return '請先在終端機執行 npm start，然後開啟 http://localhost:3000/，不要直接打開 HTML 檔案。';
+  }
+  if (/timeout/i.test(err.message)) {
+    return 'JUMP 網站暫時沒有回應，請稍後再試。';
+  }
+  if (/JUMP|socket hang up|network socket disconnected|secure TLS connection|connection reset|connection closed/i.test(err.message)) {
+    return 'JUMP 目前連線不穩或暫時拒絕連線，請稍後再試。';
+  }
+  return err.message;
+}
+
+function getJumpUiErrorMessage(err) {
+  return getSearchErrorMessage(err);
+}
+
 async function doSearch(resetPage = true) {
   const q = document.getElementById('searchInput').value.trim();
   const industryId = document.getElementById('industrySelect').value;
@@ -1186,7 +1320,8 @@ async function doSearch(resetPage = true) {
   } catch (err) {
     listEl.innerHTML = `<div class="loading" style="color:#e74c3c;flex-direction:column;gap:8px;padding:20px">
       <div>⚠️ 搜尋失敗</div>
-      <div style="font-size:0.8rem">${err.message}</div>
+      <div style="font-size:0.8rem">${escHtml(getSearchErrorMessage(err))}</div>
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="doSearch(true)">重新搜尋</button>
     </div>`;
   }
 }
@@ -1230,11 +1365,27 @@ async function loadMore() {
 
 // Job detail
 async function loadJobDetail(job) {
+  const requestId = state.activeDetailRequestId + 1;
+  state.activeDetailRequestId = requestId;
+  if (state.detailAbortController) state.detailAbortController.abort();
+  const controller = new AbortController();
+  state.detailAbortController = controller;
+
   // Update active card
   document.querySelectorAll('.job-card').forEach(c => c.classList.remove('active'));
   const card = document.getElementById(`card-${job.adId}`);
   if (card) card.classList.add('active');
   state.activeJobId = job.adId;
+  state.checklistData = [];
+  state.coverLetter = '';
+  state.jobEmail = '';
+  state.jobTitle = job.title || '';
+  state.jobCompany = job.company || '';
+  state.jobUrl = '';
+  state.jobAddress = '';
+  state.jobPostingAddress = '';
+  state.jobAddressSource = '';
+  state.jobPrincipal = '';
 
   const detailPanel = document.getElementById('detailPanel');
   detailPanel.innerHTML = `
@@ -1243,9 +1394,10 @@ async function loadJobDetail(job) {
 
   try {
     // Fetch job detail
-    const resp = await fetch(`/api/job/${job.adId}`);
+    const resp = await fetch(`/api/job/${job.adId}`, { signal: controller.signal });
     const jobData = await resp.json();
 
+    if (!isCurrentDetailRequest(requestId)) return;
     if (jobData.error) throw new Error(jobData.error);
 
     state.jobTitle = jobData.title || job.title;
@@ -1253,6 +1405,8 @@ async function loadJobDetail(job) {
     state.jobEmail = jobData.email || '';
     state.jobUrl = jobData.url;
     state.jobAddress = '';
+    state.jobPostingAddress = '';
+    state.jobAddressSource = '';
     state.jobPrincipal = '';
 
     // Render job header
@@ -1262,24 +1416,23 @@ async function loadJobDetail(job) {
     renderParsingSection(detailPanel);
     // Run lookup and parsing in parallel
     const [_, lookupData] = await Promise.all([
-      parseJobRequirements(jobData, detailPanel),
-      lookupCompanyInfo(state.jobCompany)
+      parseJobRequirements(jobData, requestId, controller.signal),
+      lookupCompanyInfo(state.jobCompany, requestId, controller.signal)
     ]);
-    if (lookupData) {
-      // Prefer the address extracted directly from the job posting (set by parseJobRequirements)
-      // Fall back to the Google Search lookup address
-      if (!state.jobAddress) state.jobAddress = lookupData.address || '';
-      state.jobPrincipal = lookupData.principal || '';
-      renderLookupInfo(lookupData);
-    }
+    if (!isCurrentDetailRequest(requestId)) return;
+    applyLookupData(lookupData);
     // Now generate cover letter with both lookup + parsed requirements available
-    await generateCoverLetter();
+    await generateCoverLetter(requestId, controller.signal);
 
   } catch (err) {
+    if (err.name === 'AbortError' || !isCurrentDetailRequest(requestId)) return;
+    const message = getJumpUiErrorMessage(err);
+    const retryJob = JSON.stringify(job).split('"').join('&quot;');
     detailPanel.innerHTML = `
       <div class="card">
-        <div class="card-body" style="color:#e74c3c;padding:20px">
-          ⚠️ 載入失敗：${escHtml(err.message)}
+        <div class="card-body" style="color:#e74c3c;padding:20px;display:flex;flex-direction:column;gap:10px">
+          <div>⚠️ 載入失敗：${escHtml(message)}</div>
+          <button class="btn btn-secondary" onclick="loadJobDetail(${retryJob})">重新載入</button>
         </div>
       </div>
     `;
@@ -1307,7 +1460,7 @@ function renderJobHeader(jobData, job) {
 
   const enquiriesHtml = jobData.enquiries && !email
     ? `<div style="margin-top:10px;padding:10px 12px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;font-size:0.85rem;color:#6d4c00">
-        📬 <strong>Application method:</strong> ${escHtml(jobData.enquiries)}
+        📬 <strong>申請方法：</strong> ${escHtml(jobData.enquiries)}
        </div>`
     : '';
 
@@ -1328,17 +1481,17 @@ function renderJobHeader(jobData, job) {
 }
 
 function renderParsingSection(detailPanel) {
-  // School info lives in its own container so it is NEVER overwritten by requirements rendering
+  // School info lives in its own container so it is not overwritten by requirements rendering.
   const schoolSection = document.getElementById('schoolInfoSection');
   if (schoolSection) {
     schoolSection.innerHTML = `
       <div class="card" id="schoolInfoCard">
         <div class="card-header">
-          <h3>🏫 School / Organisation Info</h3>
+          <h3>🏫 學校／機構資料</h3>
           <div class="loading" style="padding:0" id="schoolSpinner"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div></div>
         </div>
         <div id="lookupCard">
-          <div class="card-body" style="color:var(--text-muted);font-size:0.88rem">Looking up school info…</div>
+          <div class="card-body" style="color:var(--text-muted);font-size:0.88rem">正在查找學校／機構資料…</div>
         </div>
       </div>
     `;
@@ -1356,30 +1509,42 @@ function renderParsingSection(detailPanel) {
   `;
 }
 
-async function parseJobRequirements(jobData, detailPanel) {
+async function parseJobRequirements(jobData, requestId, signal) {
   try {
+    setAiStatus('busy', '分析職位中');
     const resp = await fetch('/api/parse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal,
       body: JSON.stringify({
         jobText: jobData.bodyText,
         sections: jobData.sections,
         title: jobData.title,
-        company: jobData.company
+        company: jobData.company,
+        model: state.aiModel
       })
     });
     const parsed = await resp.json();
 
+    if (!isCurrentDetailRequest(requestId)) return;
     if (parsed.error) {
+      setAiStatus('error', 'AI 錯誤', parsed.error);
       const errMsg = parsed.error.includes('apiKey') || parsed.error.includes('API_KEY') || parsed.error.includes('auth')
         ? 'Gemini API Key 未設定。請在 .env 檔案中設定 GEMINI_API_KEY（免費：aistudio.google.com/apikey）'
         : parsed.error;
       throw new Error(errMsg);
     }
+    if (parsed.modelUsed) setAiStatus('ready', parsed.modelUsed, '最近用於職位分析');
 
     state.checklistData = parsed.requirements || [];
-    // Use address from the job posting itself (most accurate)
-    if (parsed.schoolAddress) state.jobAddress = parsed.schoolAddress;
+    // Keep the posting address as a fallback. A fresh lookup may replace it later.
+    if (parsed.schoolAddress) {
+      state.jobPostingAddress = parsed.schoolAddress;
+      if (!state.jobAddress) {
+        state.jobAddress = parsed.schoolAddress;
+        state.jobAddressSource = 'posting';
+      }
+    }
     if (parsed.contactEmail && !state.jobEmail) {
       state.jobEmail = parsed.contactEmail;
       // Immediately update header chip too
@@ -1402,6 +1567,11 @@ async function parseJobRequirements(jobData, detailPanel) {
         <div class="card-header">
           <h3>✉️ 求職信</h3>
           <div class="cover-letter-actions">
+            <label style="font-size:0.82rem;color:var(--text-muted);font-weight:600">語言</label>
+            <select id="letterLanguage" onchange="setCoverLetterLanguage(this.value); regenerateLetter()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.82rem">
+              <option value="zh" ${state.coverLetterLanguage === 'zh' ? 'selected' : ''}>繁體中文</option>
+              <option value="en" ${state.coverLetterLanguage === 'en' ? 'selected' : ''}>英文</option>
+            </select>
             <button class="btn btn-copy" onclick="regenerateLetter()">🔄 重新生成</button>
             <button class="btn btn-copy" onclick="copyLetter()">📋 複製</button>
           </div>
@@ -1432,6 +1602,8 @@ async function parseJobRequirements(jobData, detailPanel) {
     // Cover letter is generated later, after lookup also completes
 
   } catch (err) {
+    if (err.name === 'AbortError' || !isCurrentDetailRequest(requestId)) return;
+    setAiStatus('error', '職位分析失敗', err.message);
     const dynSections = document.getElementById('dynamicSections');
     if (dynSections) {
       dynSections.innerHTML = `
@@ -1510,15 +1682,43 @@ function updateChecklistProgress() {
   });
 }
 
-async function lookupCompanyInfo(company) {
+async function lookupCompanyInfo(company, requestId = state.activeDetailRequestId, signal) {
   try {
+    setAiStatus('busy', '查找學校中');
     const resp = await fetch('/api/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company })
+      signal,
+      body: JSON.stringify({
+        company,
+        language: state.coverLetterLanguage,
+        model: state.aiModel
+      })
     });
-    return await resp.json();
-  } catch { return null; }
+    const data = await resp.json();
+    if (data.modelUsed && isCurrentDetailRequest(requestId)) {
+      setAiStatus('ready', data.modelUsed, '最近用於學校查找');
+    }
+    return isCurrentDetailRequest(requestId) ? data : null;
+  } catch (err) {
+    if (err.name !== 'AbortError') return null;
+    throw err;
+  }
+}
+
+function applyLookupData(data, shouldRender = true) {
+  if (!data) return;
+  // Prefer freshly looked-up address details for the selected letter language.
+  // Fall back to the address extracted directly from the job posting.
+  if (data.address) {
+    state.jobAddress = data.address;
+    state.jobAddressSource = 'lookup';
+  } else if (!state.jobAddress && state.jobPostingAddress) {
+    state.jobAddress = state.jobPostingAddress;
+    state.jobAddressSource = 'posting';
+  }
+  state.jobPrincipal = data.principal || '';
+  if (shouldRender) renderLookupInfo(data);
 }
 
 function renderLookupInfo(data) {
@@ -1527,7 +1727,7 @@ function renderLookupInfo(data) {
   const card = document.getElementById('lookupCard');
   if (!card) return;
 
-  // Inject school website (or fallback to jump ad link) into the job header
+  // Inject school website (or fallback to JUMP ad link) into the job header.
   const headerLinkEl = document.getElementById('headerWebsiteLink');
   if (headerLinkEl) {
     if (data.website) {
@@ -1537,14 +1737,13 @@ function renderLookupInfo(data) {
     }
   }
 
-  const hasInfo = data.address || data.principal || data.banding || data.district || data.school_type;
+  const displayAddr = state.jobAddress || data.address;
+  const addrSource = state.jobAddressSource === 'lookup' ? '（重新查找）' : '（來自招聘廣告）';
+  const hasInfo = displayAddr || data.principal || data.banding || data.district || data.school_type;
   if (!hasInfo) {
     card.innerHTML = `<div class="card-body" style="color:var(--text-muted);font-size:0.88rem">找不到相關資料，請手動填寫。</div>`;
     return;
   }
-
-  const displayAddr = state.jobAddress || data.address;
-  const addrSource = state.jobAddress ? '(from job ad)' : '(AI lookup)';
 
   // Banding badge colour
   const bandingColor = (() => {
@@ -1574,18 +1773,18 @@ function renderLookupInfo(data) {
         <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
           <span style="font-size:1.3rem">🏅</span>
           <div>
-            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:4px">Banding</div>
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:4px">學校組別</div>
             <span style="background:${bandingColor};color:white;font-weight:700;font-size:1rem;padding:3px 14px;border-radius:20px;letter-spacing:0.5px">${escHtml(data.banding)}</span>
           </div>
         </div>` : ''}
-      ${infoRow('👤', 'Principal / Director', escHtml(data.principal), data.principal)}
-      ${infoRow('📍', `Address ${addrSource}`, escHtml(displayAddr), displayAddr)}
-      ${infoRow('🏫', 'School Type', escHtml(data.school_type), '')}
-      ${infoRow('📌', 'District', escHtml(data.district), '')}
-      ${infoRow('📅', 'Year Founded', data.founded ? `Est. ${escHtml(data.founded)}` : '', '')}
-      ${data.website ? infoRow('🌐', 'Website', `<a href="${escAttr(data.website)}" target="_blank" style="color:var(--blue);word-break:break-all">${escHtml(data.website)}</a>`, '') : ''}
+      ${infoRow('👤', '校長／負責人', escHtml(data.principal), data.principal)}
+      ${infoRow('📍', `地址 ${addrSource}`, escHtml(displayAddr), displayAddr)}
+      ${infoRow('🏫', '學校類型', escHtml(data.school_type), '')}
+      ${infoRow('📌', '地區', escHtml(data.district), '')}
+      ${infoRow('📅', '創校年份', data.founded ? `約 ${escHtml(data.founded)} 年` : '', '')}
+      ${data.website ? infoRow('🌐', '網站', `<a href="${escAttr(data.website)}" target="_blank" style="color:var(--blue);word-break:break-all">${escHtml(data.website)}</a>`, '') : ''}
       <div style="padding:10px 0;font-size:0.75rem;color:var(--text-muted)">
-        ⚠️ AI-generated — please verify before sending
+        ⚠️ AI 產生資料，發送前請先核對
       </div>
     </div>
   `;
@@ -1595,22 +1794,24 @@ function renderLookupInfo(data) {
 function updateGmailRecipient() {
   const subjectEl = document.getElementById('gmailSubject');
   if (subjectEl && !subjectEl.dataset.edited) {
-    subjectEl.value = `Application for the Post of ${state.jobTitle}`;
+    subjectEl.value = getCoverLetterSubject();
   }
 }
 
 function copyText(text) {
-  navigator.clipboard.writeText(text).then(() => showToast('✅ Copied to clipboard'));
+  navigator.clipboard.writeText(text).then(() => showToast('✅ 已複製到剪貼板'));
 }
 
-async function generateCoverLetter() {
+async function generateCoverLetter(requestId = state.activeDetailRequestId, signal) {
   const profile = JSON.parse(localStorage.getItem('jumpProfile') || '{}');
   const requirements = state.checklistData;
 
   try {
+    setAiStatus('busy', '撰寫求職信中');
     const resp = await fetch('/api/generate-letter', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal,
       body: JSON.stringify({
         jobTitle: state.jobTitle,
         company: state.jobCompany,
@@ -1618,27 +1819,24 @@ async function generateCoverLetter() {
         responsibilities: [],
         profile,
         address: state.jobAddress || '',
-        principal: state.jobPrincipal || ''
+        principal: state.jobPrincipal || '',
+        language: state.coverLetterLanguage,
+        model: state.aiModel
       })
     });
     const data = await resp.json();
 
+    if (!isCurrentDetailRequest(requestId)) return;
     if (data.error) throw new Error(data.error);
 
     state.coverLetter = data.letter;
 
-    // Extract translated job title from the "Application for the Post of …" line
-    const titleMatch = data.letter.match(/Application for the Post of (.+)/i);
+    const titleMatch = state.coverLetterLanguage === 'en'
+      ? data.letter.match(/Application for the Post of (.+)/i)
+      : data.letter.match(/應徵[「『]?(.+?)[」』]?(?:一職)?(?:\n|$)/);
     if (titleMatch) state.jobTitle = titleMatch[1].trim();
 
-    // Update model badge to show which model actually generated this letter
-    if (data.modelUsed) {
-      const badge = document.getElementById('modelBadge');
-      if (badge) {
-        badge.textContent = '⚙ ' + data.modelUsed;
-        badge.title = 'Last used model: ' + data.modelUsed;
-      }
-    }
+    if (data.modelUsed) setAiStatus('ready', data.modelUsed, '最近用於求職信');
 
     const loadingEl = document.getElementById('letterLoading');
     const displayEl = document.getElementById('coverLetterDisplay');
@@ -1653,15 +1851,17 @@ async function generateCoverLetter() {
     }
     if (gmailEl) {
       gmailEl.style.display = 'block';
-      // Set default subject using the (now translated) job title
+      // Set default subject using the translated job title.
       const subjectEl = document.getElementById('gmailSubject');
-      if (subjectEl) subjectEl.value = `Application for the Post of ${state.jobTitle}`;
-      // Set email from job
+      if (subjectEl) subjectEl.value = getCoverLetterSubject();
+      // Set email from job.
       const toEl = document.getElementById('gmailTo');
       if (toEl && state.jobEmail) toEl.value = state.jobEmail;
     }
 
   } catch (err) {
+    if (err.name === 'AbortError' || !isCurrentDetailRequest(requestId)) return;
+    setAiStatus('error', '求職信生成失敗', err.message);
     const loadingEl = document.getElementById('letterLoading');
     if (loadingEl) {
       loadingEl.innerHTML = `<span style="color:#e74c3c">⚠️ 生成失敗：${escHtml(err.message)}</span>`;
@@ -1670,26 +1870,37 @@ async function generateCoverLetter() {
 }
 
 async function regenerateLetter() {
+  const requestId = state.activeDetailRequestId;
+  const signal = state.detailAbortController?.signal;
   const loadingEl = document.getElementById('letterLoading');
-  const textEl = document.getElementById('coverLetterText');
   const gmailEl = document.getElementById('gmailSection');
 
   const displayEl2 = document.getElementById('coverLetterDisplay');
-  if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.innerHTML = '<div class="spinner"></div>重新生成中…'; }
+  if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.innerHTML = '<div class="spinner"></div>重新查找資料並生成中…'; }
   if (displayEl2) displayEl2.style.display = 'none';
   if (gmailEl) gmailEl.style.display = 'none';
 
-  await generateCoverLetter();
+  if (state.jobCompany) {
+    const lookupData = await lookupCompanyInfo(
+      state.jobCompany,
+      requestId,
+      signal
+    );
+    if (!isCurrentDetailRequest(requestId)) return;
+    applyLookupData(lookupData);
+  }
+
+  await generateCoverLetter(requestId, signal);
 }
 
 function renderLetterHtml(text) {
-  // Escape HTML then restore newlines, and center the "Application for the Post of" line
+  // Escape HTML then restore newlines, and center the subject line.
   const escaped = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
   return escaped.replace(
-    /(Application for the Post of .+)/g,
+    /(應徵[「『]?.+?[」』]?一職|Application for the Post of .+)/g,
     '<span class="letter-subject">$1</span>'
   );
 }
@@ -1702,7 +1913,7 @@ function copyLetter() {
 
 function openGmail() {
   const to = document.getElementById('gmailTo')?.value?.trim() || '';
-  const subject = document.getElementById('gmailSubject')?.value?.trim() || `Application for the Post of ${state.jobTitle}`;
+  const subject = document.getElementById('gmailSubject')?.value?.trim() || getCoverLetterSubject();
   const body = document.getElementById('coverLetterText')?.value || state.coverLetter;
 
   if (!body) {
@@ -1746,13 +1957,7 @@ document.getElementById('profileModal').addEventListener('click', e => {
 // Init
 loadProfile();
 updateTabBadges();
-fetch('/api/model').then(r => r.json()).then(data => {
-  const el = document.getElementById('modelBadge');
-  if (el) {
-    el.textContent = '⚙ ' + data.primary;
-    el.title = 'Model chain: ' + data.chain.join(' → ');
-  }
-}).catch(() => {});
+refreshAiStatus();
 </script>
 </body>
 </html>
