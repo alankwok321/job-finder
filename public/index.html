@@ -83,6 +83,12 @@
 
   #profileBtn:hover { background: rgba(255,255,255,0.25); }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
   .model-select {
     background: rgba(255,255,255,0.15);
     border: 1.5px solid rgba(255,255,255,0.5);
@@ -113,6 +119,7 @@
   .model-select.busy { border-color: rgba(243,156,18,0.9); color: #fff4dc; }
   .model-select.error { border-color: rgba(231,76,60,0.95); color: #ffe8e5; }
   .model-select option { color: var(--text); }
+  .language-select { max-width: 150px; }
 
   .profile-dot {
     width: 8px; height: 8px;
@@ -785,6 +792,7 @@
     .detail-panel { padding: 16px; }
     .search-row { flex-wrap: wrap; }
     .search-row select { width: 100%; }
+    .header-actions { flex-wrap: wrap; justify-content: flex-end; }
   }
 </style>
 </head>
@@ -793,9 +801,13 @@
 <header>
   <div>
     <h1><span class="logo">JUMP</span> 求職助手</h1>
-    <div class="header-subtitle">自動分析職位要求 · 生成繁體中文求職信</div>
+    <div class="header-subtitle">自動分析職位要求 · 生成繁體中文或英文求職信</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
+  <div class="header-actions">
+    <select class="model-select language-select" id="coverLanguageSelect" title="選擇求職信語言" onchange="setCoverLetterLanguage(this.value); if (state.activeJobId) regenerateLetter()">
+      <option value="zh">繁體中文</option>
+      <option value="en">English</option>
+    </select>
     <select class="model-select" id="modelSelect" title="選擇 AI 模型" onchange="setAiModel(this.value)">
       <option value="">載入模型中…</option>
     </select>
@@ -959,7 +971,13 @@ function getCoverLetterSubject() {
 function setCoverLetterLanguage(lang) {
   state.coverLetterLanguage = lang === 'en' ? 'en' : 'zh';
   localStorage.setItem('jumpCoverLetterLanguage', state.coverLetterLanguage);
+  syncCoverLanguageSelect();
   updateGmailRecipient();
+}
+
+function syncCoverLanguageSelect() {
+  const selector = document.getElementById('coverLanguageSelect');
+  if (selector) selector.value = state.coverLetterLanguage;
 }
 
 function setAiModel(model) {
@@ -1567,11 +1585,6 @@ async function parseJobRequirements(jobData, requestId, signal) {
         <div class="card-header">
           <h3>✉️ 求職信</h3>
           <div class="cover-letter-actions">
-            <label style="font-size:0.82rem;color:var(--text-muted);font-weight:600">語言</label>
-            <select id="letterLanguage" onchange="setCoverLetterLanguage(this.value); regenerateLetter()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.82rem">
-              <option value="zh" ${state.coverLetterLanguage === 'zh' ? 'selected' : ''}>繁體中文</option>
-              <option value="en" ${state.coverLetterLanguage === 'en' ? 'selected' : ''}>英文</option>
-            </select>
             <button class="btn btn-copy" onclick="regenerateLetter()">🔄 重新生成</button>
             <button class="btn btn-copy" onclick="copyLetter()">📋 複製</button>
           </div>
@@ -1957,6 +1970,7 @@ document.getElementById('profileModal').addEventListener('click', e => {
 // Init
 loadProfile();
 updateTabBadges();
+syncCoverLanguageSelect();
 refreshAiStatus();
 </script>
 </body>
