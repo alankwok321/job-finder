@@ -1,4 +1,4 @@
-const { fetchJumpHtml, getJumpErrorMessage, parseJobHtml } = require('./_jump');
+const { fetchJumpHtml, getJumpErrorMessage, parseJobHtml } = require('../_jump');
 
 module.exports = async function handler(req, res) {
   try {

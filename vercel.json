@@ -1,37 +1,14 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/search.js",
-      "use": "@vercel/node",
-      "config": {
-        "regions": ["hkg1"]
-      }
+  "functions": {
+    "api/search.js": {
+      "regions": ["hkg1"]
     },
-    {
-      "src": "api/job.js",
-      "use": "@vercel/node",
-      "config": {
-        "regions": ["hkg1"]
-      }
+    "api/job/[id].js": {
+      "regions": ["hkg1"]
     },
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
+    "api/[...path].js": {
+      "regions": ["iad1"]
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/search",
-      "dest": "/api/search.js"
-    },
-    {
-      "src": "/api/job/([^/]+)",
-      "dest": "/api/job.js?id=$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "server.js"
-    }
-  ]
+  }
 }
