@@ -6,8 +6,6 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const http = require('http');
 const https = require('https');
-const { HttpsProxyAgent } = require('https-proxy-agent');
-const { SocksProxyAgent } = require('socks-proxy-agent');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
@@ -103,7 +101,20 @@ const JUMP_TIMEOUT_MS = parseInt(process.env.JUMP_TIMEOUT_MS || '25000', 10);
 const JUMP_RETRY_COUNT = parseInt(process.env.JUMP_RETRY_COUNT || '4', 10);
 const JUMP_PROXY_URL = (process.env.JUMP_PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY || '').trim();
 
-function createJumpAgent(targetUrl) {
+let proxyAgentModules;
+
+async function getProxyAgentModules() {
+  if (!proxyAgentModules) {
+    const [{ HttpsProxyAgent }, { SocksProxyAgent }] = await Promise.all([
+      import('https-proxy-agent'),
+      import('socks-proxy-agent'),
+    ]);
+    proxyAgentModules = { HttpsProxyAgent, SocksProxyAgent };
+  }
+  return proxyAgentModules;
+}
+
+async function createJumpAgent(targetUrl) {
   if (!JUMP_PROXY_URL) {
     return targetUrl.startsWith('https:')
       ? new https.Agent({ keepAlive: false })
@@ -111,10 +122,12 @@ function createJumpAgent(targetUrl) {
   }
 
   if (/^socks[45]h?:\/\//i.test(JUMP_PROXY_URL)) {
+    const { SocksProxyAgent } = await getProxyAgentModules();
     return new SocksProxyAgent(JUMP_PROXY_URL, { keepAlive: false });
   }
 
   if (/^https?:\/\//i.test(JUMP_PROXY_URL)) {
+    const { HttpsProxyAgent } = await getProxyAgentModules();
     return new HttpsProxyAgent(JUMP_PROXY_URL, { keepAlive: false });
   }
 
@@ -169,7 +182,7 @@ async function fetchJumpHtml(url, label = 'JUMP page') {
   let lastErr;
   for (let attempt = 1; attempt <= JUMP_RETRY_COUNT; attempt++) {
     try {
-      const agent = createJumpAgent(url);
+      const agent = await createJumpAgent(url);
       const response = await jumpClient.get(url, {
         httpAgent: agent,
         httpsAgent: agent,
